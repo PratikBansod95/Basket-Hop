@@ -11,6 +11,7 @@ import type { SaveData } from './platform/types';
 import { GameOverModal } from './ui/gameOver';
 import { MainMenu } from './ui/mainMenu';
 import { Hud } from './ui/hud';
+import { bindStageResize, computeStageLayout, getViewportSize } from './ui/stageLayout';
 
 const launchMechanic = new DefaultTapLaunch();
 
@@ -69,34 +70,27 @@ async function main(): Promise<void> {
   let paused = false;
 
   function resize(): void {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const containScale = Math.min(vw / CANVAS_WIDTH, vh / CANVAS_HEIGHT);
-    const coverScale = Math.max(vw / CANVAS_WIDTH, vh / CANVAS_HEIGHT);
-    const isPhone = Math.min(vw, vh) < 520;
-    const scale = isPhone ? coverScale : containScale;
-    const styleW = `${CANVAS_WIDTH * scale}px`;
-    const styleH = `${CANVAS_HEIGHT * scale}px`;
+    const { width: vw, height: vh } = getViewportSize();
+    const layout = computeStageLayout(vw, vh);
 
-    canvasStage.style.width = styleW;
-    canvasStage.style.height = styleH;
+    canvasStage.style.width = `${layout.width}px`;
+    canvasStage.style.height = `${layout.height}px`;
 
     for (const c of [canvas, menuBallCanvas]) {
-      c.width = CANVAS_WIDTH * dpr;
-      c.height = CANVAS_HEIGHT * dpr;
+      c.width = CANVAS_WIDTH * layout.dpr;
+      c.height = CANVAS_HEIGHT * layout.dpr;
       c.style.width = '100%';
       c.style.height = '100%';
     }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    menuBallCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+    menuBallCtx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
   }
 
   function setMenuBallVisible(visible: boolean): void {
     menuBallCanvas.classList.toggle('hidden', !visible);
   }
 
-  window.addEventListener('resize', resize);
+  bindStageResize(resize);
   resize();
   renderLoading(ctx);
   void preloadBackgroundAssets();
