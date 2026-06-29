@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="ad.orientation" content="portrait" />
+    <title>Basket Hop</title>
+    <script src="https://tpc.googlesyndication.com/pagead/gadgets/html5/api/exitapi.js"></script>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div class="canvas-stage">
+        <canvas id="game-canvas"></canvas>
+      </div>
+      <div id="hud"></div>
+      <div id="main-menu">
+        <div class="menu-card ui-panel">
+          <p class="ui-kicker">Arcade climber</p>
+          <h1 class="ui-title">BASKET <span class="accent">HOP</span></h1>
+          <p class="menu-tagline">Shoot, score, and climb.</p>
+          <div class="menu-best" id="menu-best">BEST 0</div>
+          <div class="menu-actions">
+            <button class="ui-btn ui-btn-primary" id="start-btn" type="button">START GAME</button>
+            <button class="ui-btn ui-btn-ghost" id="howto-btn" type="button">HOW TO PLAY</button>
+          </div>
+        </div>
+      </div>
+      <canvas id="menu-ball-canvas" class="hidden"></canvas>
+      <div id="how-to-play" class="hidden">
+        <div class="howto-modal ui-panel">
+          <h2 class="howto-title">HOW TO PLAY</h2>
+          <ul class="howto-list">
+            <li><span class="howto-num">1</span><span><strong>Tap</strong> to launch the ball toward the hoop.</span></li>
+            <li><span class="howto-num">2</span><span>Make a basket to <strong>climb higher</strong> as the court scrolls up.</span></li>
+            <li><span class="howto-num">3</span><span>Hoops alternate between the <strong>left and right</strong> corners.</span></li>
+            <li><span class="howto-num">4</span><span>Tap again mid-air to <strong>steer</strong> toward the next rim.</span></li>
+            <li><span class="howto-num">5</span><span>Leave the top or bottom of the screen and it's <strong>game over</strong>.</span></li>
+            <li><span class="howto-num">6</span><span>Chain clean swishes for <strong>combo bonuses</strong> and a hot streak.</span></li>
+          </ul>
+          <button class="ui-btn ui-btn-primary" id="howto-close-btn" type="button">GOT IT</button>
+        </div>
+      </div>
+      <div id="game-over" class="hidden"></div>
+      <button id="mute-btn" type="button" aria-label="Toggle sound">🔊</button>
+      <div id="publisher">Basket Hop</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "basket-hop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "build:ads": "tsc && vite build --mode ads && node scripts/build-ads-playable.mjs",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "archiver": "^7.0.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0"
+  }
+}

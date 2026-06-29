@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#1a1a2e"/>
+  <rect x="340" y="80" width="600" height="560" rx="24" fill="#2d5a27"/>
+  <circle cx="640" cy="420" r="40" fill="#e65c00"/>
+  <rect x="520" y="200" width="10" height="80" fill="#fff"/>
+  <line x1="490" y1="280" x2="560" y2="280" stroke="#e67e22" stroke-width="6"/>
+  <text x="640" y="600" text-anchor="middle" fill="#fff" font-family="system-ui" font-size="48" font-weight="bold">Basket Hop</text>
+</svg>
