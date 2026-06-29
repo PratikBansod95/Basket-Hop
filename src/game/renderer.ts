@@ -1,6 +1,5 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH, FLOOR_Y, screenY } from './constants';
 import { drawDangerZones } from './dangerZoneRenderer';
-import { drawFloatingClouds } from './cloudRenderer';
 import { drawWorld } from './worldRenderer';
 import { drawSkyScreen } from './skyRenderer';
 import { drawBall, drawBallShadow } from './ballRenderer';
@@ -44,7 +43,6 @@ export function render(
   ctx.save();
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   drawSkyScreen(ctx, state.climbOffset, state.time);
-  drawFloatingClouds(ctx, state.time, state.climbOffset);
 
   ctx.translate(shakeX, shakeY);
   ctx.translate(0, state.climbOffset);

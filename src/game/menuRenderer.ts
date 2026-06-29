@@ -1,6 +1,5 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from './constants';
 import { drawBall } from './ballRenderer';
-import { drawFloatingClouds } from './cloudRenderer';
 import { drawHoopNet, drawHoopRim } from './hoopRenderer';
 import { drawSkyScreen } from './skyRenderer';
 import { drawWorld } from './worldRenderer';
@@ -23,7 +22,6 @@ const MENU_HOOP: Hoop = {
 export function renderMenuScene(ctx: CanvasRenderingContext2D, time: number): void {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   drawSkyScreen(ctx, 0, time);
-  drawFloatingClouds(ctx, time, 0);
   drawWorld(ctx, 0, time);
 
   drawHoopNet(ctx, MENU_HOOP);
