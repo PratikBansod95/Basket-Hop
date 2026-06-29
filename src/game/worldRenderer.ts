@@ -230,9 +230,9 @@ function drawBelowCourtVoid(ctx: CanvasRenderingContext2D, viewTop: number, view
 
   const top = Math.max(voidTop, viewTop);
   const grad = ctx.createLinearGradient(0, top, 0, viewBottom);
-  grad.addColorStop(0, '#1a1208');
-  grad.addColorStop(0.4, '#0d0a06');
-  grad.addColorStop(1, '#000000');
+  grad.addColorStop(0, '#8a5520');
+  grad.addColorStop(0.45, '#5c3818');
+  grad.addColorStop(1, '#3a2410');
   ctx.fillStyle = grad;
   ctx.fillRect(0, top, W, viewBottom - top);
 }

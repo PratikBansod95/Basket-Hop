@@ -1,4 +1,5 @@
-import { CANVAS_HEIGHT, CANVAS_WIDTH, DEATH_MARGIN, FLOOR_Y } from './constants';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, FLOOR_Y, screenY } from './constants';
+import { drawDangerZones } from './dangerZoneRenderer';
 import { drawWorld } from './worldRenderer';
 import { drawSkyScreen } from './skyRenderer';
 import { drawBall, drawBallShadow } from './ballRenderer';
@@ -51,23 +52,20 @@ export function render(
   drawHoopNet(ctx, hoop);
   drawParticles(ctx);
   drawFloatingTexts(ctx, floatingTexts);
-  drawBallShadow(ctx, ball.x, ball.y, ball.radius, FLOOR_Y);
-  drawBall(ctx, ball.x, ball.y, ball.radius, ball.rotation);
+
+  const idleBob = ball.hasLaunched ? 0 : Math.sin(state.time * 2.8) * 5;
+  const ballDrawY = ball.y + idleBob;
+
+  drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, FLOOR_Y);
+  drawBall(ctx, ball.x, ballDrawY, ball.radius, ball.rotation);
   drawHoopRim(ctx, hoop);
 
   ctx.restore();
 
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255, 107, 44, 0.35)';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([8, 10]);
-  ctx.beginPath();
-  ctx.moveTo(0, DEATH_MARGIN);
-  ctx.lineTo(CANVAS_WIDTH, DEATH_MARGIN);
-  ctx.moveTo(0, CANVAS_HEIGHT - DEATH_MARGIN);
-  ctx.lineTo(CANVAS_WIDTH, CANVAS_HEIGHT - DEATH_MARGIN);
-  ctx.stroke();
-  ctx.restore();
+  if (ball.hasLaunched) {
+    const ballScreenY = screenY(ball.y, state.climbOffset);
+    drawDangerZones(ctx, state.time, ballScreenY, ball.radius);
+  }
 }
 
 export function renderLoading(ctx: CanvasRenderingContext2D): void {

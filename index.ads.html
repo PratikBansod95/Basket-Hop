@@ -15,9 +15,13 @@
     <div id="app">
       <div class="canvas-stage">
         <canvas id="game-canvas"></canvas>
+        <canvas id="menu-ball-canvas" class="hidden"></canvas>
+        <div id="game-overlay">
+          <div id="hud"></div>
+        </div>
       </div>
-      <div id="hud"></div>
       <div id="main-menu">
+        <button id="menu-mute-btn" class="menu-mute-btn" type="button" aria-label="Toggle sound">🔊</button>
         <div class="menu-card ui-panel">
           <p class="ui-kicker">Arcade climber</p>
           <h1 class="ui-title">BASKET <span class="accent">HOP</span></h1>
@@ -29,7 +33,6 @@
           </div>
         </div>
       </div>
-      <canvas id="menu-ball-canvas" class="hidden"></canvas>
       <div id="how-to-play" class="hidden">
         <div class="howto-modal ui-panel">
           <h2 class="howto-title">HOW TO PLAY</h2>
@@ -45,7 +48,6 @@
         </div>
       </div>
       <div id="game-over" class="hidden"></div>
-      <button id="mute-btn" type="button" aria-label="Toggle sound">🔊</button>
       <div id="publisher">Basket Hop</div>
     </div>
     <script type="module" src="/src/main.ts"></script>

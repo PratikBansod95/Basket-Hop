@@ -80,29 +80,37 @@ export const WORLD = {
 
   courtFloorY: 3080,
 
-  spawnY: 3020,
-
   spawnX: CANVAS_WIDTH / 2,
 
 } as const;
 
 
 
-export const BALL_SPAWN_X = WORLD.spawnX;
+export const OPEN_COURT_TOP = WORLD.stadiumTop - 220;
 
-export const BALL_SPAWN_Y = WORLD.spawnY;
+/** Mid-court world Y — center jump circle on the open court artwork. */
+
+export const COURT_CENTER_Y = Math.round((OPEN_COURT_TOP + WORLD.courtFloorY) / 2);
+
+
+
+export const BALL_SPAWN_X = WORLD.spawnX;
 
 export const FLOOR_Y = WORLD.courtFloorY;
 
 
 
-/** Screen Y where the ball floats at game start (center court jump circle). */
+/** Align the court floor with the bottom out-of-bounds line (no black void below). */
 
-export const BALL_START_SCREEN_Y = 790;
+export const COURT_FLOOR_SCREEN_Y = CANVAS_HEIGHT - DEATH_MARGIN - 12;
 
-/** Camera offset so spawn world Y maps to BALL_START_SCREEN_Y. */
+export const INITIAL_CLIMB_OFFSET = COURT_FLOOR_SCREEN_Y - WORLD.courtFloorY;
 
-export const INITIAL_CLIMB_OFFSET = BALL_START_SCREEN_Y - BALL_SPAWN_Y;
+/** Ball screen Y at idle start — center court key (marked circle). */
+
+export const BALL_START_SCREEN_Y = 835;
+
+export const BALL_SPAWN_Y = BALL_START_SCREEN_Y - INITIAL_CLIMB_OFFSET;
 
 
 

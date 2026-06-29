@@ -4,23 +4,16 @@ export class Hud {
   private root: HTMLElement;
   private scoreEl: HTMLElement;
   private scoreWrap: HTMLElement;
-  private levelEl: HTMLElement;
   private streakEl: HTMLElement;
   private hintEl: HTMLElement;
+  private lastScore = -1;
 
   constructor(rootId = 'hud') {
     this.root = document.getElementById(rootId)!;
     this.root.innerHTML = `
       <div class="hud-bar">
         <div class="hud-score-wrap" id="score-wrap">
-          <div class="hud-score-inner">
-            <span class="hud-label">SCORE</span>
-            <span class="hud-score" id="score-pill">0</span>
-          </div>
-        </div>
-        <div class="level-badge" id="level-badge">
-          <span class="hud-label">LEVEL</span>
-          <span class="level-value" id="level-value">1</span>
+          <span class="hud-score" id="score-pill">0</span>
         </div>
       </div>
       <div class="streak-badge" id="streak-badge">
@@ -34,7 +27,6 @@ export class Hud {
     `;
     this.scoreWrap = this.root.querySelector('#score-wrap')!;
     this.scoreEl = this.root.querySelector('#score-pill')!;
-    this.levelEl = this.root.querySelector('#level-value')!;
     this.streakEl = this.root.querySelector('#streak-badge')!;
     this.hintEl = this.root.querySelector('#hint-pill')!;
   }
@@ -44,8 +36,15 @@ export class Hud {
     this.root.style.display = inGame ? 'block' : 'none';
     if (!inGame) return;
 
-    this.scoreEl.textContent = String(stats.score);
-    this.levelEl.textContent = String(stats.level + 1);
+    if (stats.score !== this.lastScore) {
+      this.scoreEl.textContent = String(stats.score);
+      if (this.lastScore >= 0 && stats.score > this.lastScore) {
+        this.scoreWrap.classList.remove('bump');
+        void this.scoreWrap.offsetWidth;
+        this.scoreWrap.classList.add('bump');
+      }
+      this.lastScore = stats.score;
+    }
 
     const streakText = this.root.querySelector('#streak-text')!;
     if (stats.combo >= 2) {

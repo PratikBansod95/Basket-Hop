@@ -11,7 +11,6 @@ import type { SaveData } from './platform/types';
 import { GameOverModal } from './ui/gameOver';
 import { MainMenu } from './ui/mainMenu';
 import { Hud } from './ui/hud';
-import { initMuteButton } from './ui/mute';
 
 const launchMechanic = new DefaultTapLaunch();
 
@@ -21,7 +20,8 @@ async function main(): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   const menuBallCanvas = document.getElementById('menu-ball-canvas') as HTMLCanvasElement;
   const menuBallCtx = menuBallCanvas.getContext('2d')!;
-  const app = document.getElementById('app')!;
+  const canvasStage = document.querySelector('.canvas-stage') as HTMLElement;
+  const appRoot = document.getElementById('app')!;
 
   let saveData: SaveData = await platform.loadSave();
   let userMuted = false;
@@ -29,6 +29,18 @@ async function main(): Promise<void> {
 
   const sfx = new SfxEngine();
   const hud = new Hud();
+
+  function isMuted(): boolean {
+    return userMuted || !platformAudio;
+  }
+
+  function syncAudio(): void {
+    sfx.setEnabled(!isMuted());
+    if (mainMenu.isVisible()) {
+      mainMenu.setMuted(isMuted());
+    }
+  }
+
   const gameOverModal = new GameOverModal(
     () => startRun(),
     () => goToMainMenu(),
@@ -36,52 +48,48 @@ async function main(): Promise<void> {
   );
   gameOverModal.setAdsMode(platform.isAdsMode());
 
-  const mainMenu = new MainMenu(() => {
-    sfx.unlock();
-    startRun();
-  });
+  const mainMenu = new MainMenu(
+    () => {
+      sfx.unlock();
+      startRun();
+    },
+    () => {
+      userMuted = !userMuted;
+      syncAudio();
+    },
+  );
 
-  function isMuted(): boolean {
-    return userMuted || !platformAudio;
-  }
-
-  sfx.setEnabled(!isMuted());
-
-  initMuteButton((muted) => {
-    userMuted = muted;
-    sfx.setEnabled(!isMuted());
-  }, () => isMuted());
+  syncAudio();
 
   platform.onAudioEnabledChange((enabled) => {
     platformAudio = enabled;
-    sfx.setEnabled(!isMuted());
+    syncAudio();
   });
 
   let paused = false;
 
   function resize(): void {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const scale = Math.min(window.innerWidth / CANVAS_WIDTH, window.innerHeight / CANVAS_HEIGHT);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const containScale = Math.min(vw / CANVAS_WIDTH, vh / CANVAS_HEIGHT);
+    const coverScale = Math.max(vw / CANVAS_WIDTH, vh / CANVAS_HEIGHT);
+    const isPhone = Math.min(vw, vh) < 520;
+    const scale = isPhone ? coverScale : containScale;
     const styleW = `${CANVAS_WIDTH * scale}px`;
     const styleH = `${CANVAS_HEIGHT * scale}px`;
+
+    canvasStage.style.width = styleW;
+    canvasStage.style.height = styleH;
+
     for (const c of [canvas, menuBallCanvas]) {
       c.width = CANVAS_WIDTH * dpr;
       c.height = CANVAS_HEIGHT * dpr;
-      c.style.width = styleW;
-      c.style.height = styleH;
+      c.style.width = '100%';
+      c.style.height = '100%';
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     menuBallCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    syncMenuBallLayout();
-  }
-
-  function syncMenuBallLayout(): void {
-    const canvasRect = canvas.getBoundingClientRect();
-    const appRect = app.getBoundingClientRect();
-    menuBallCanvas.style.left = `${canvasRect.left - appRect.left}px`;
-    menuBallCanvas.style.top = `${canvasRect.top - appRect.top}px`;
-    menuBallCanvas.style.width = `${canvasRect.width}px`;
-    menuBallCanvas.style.height = `${canvasRect.height}px`;
   }
 
   function setMenuBallVisible(visible: boolean): void {
@@ -138,6 +146,7 @@ async function main(): Promise<void> {
     gameOverModal.hide();
     mainMenu.hideHowTo();
     mainMenu.show(saveData.best);
+    mainMenu.setMuted(isMuted());
     setMenuBallVisible(true);
   }
 
@@ -150,6 +159,7 @@ async function main(): Promise<void> {
   });
 
   mainMenu.show(saveData.best);
+  mainMenu.setMuted(isMuted());
   setMenuBallVisible(true);
   renderMenuScene(ctx, 0);
   renderMenuBall(menuBallCtx, 0);
@@ -170,6 +180,8 @@ async function main(): Promise<void> {
     lastTime = now;
 
     game.update(dt);
+    const inGame = game.phase !== GamePhase.Menu;
+    appRoot.classList.toggle('in-game', inGame);
     hud.update(game.stats, game.phase, game.ball.hasLaunched);
     if (game.phase === GamePhase.Menu) {
       renderMenuScene(ctx, game.time);

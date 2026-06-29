@@ -30,11 +30,15 @@
 
       <div class="canvas-stage">
         <canvas id="game-canvas"></canvas>
+        <canvas id="menu-ball-canvas" class="hidden"></canvas>
+        <div id="game-overlay">
+          <div id="hud"></div>
+        </div>
       </div>
 
-      <div id="hud"></div>
-
       <div id="main-menu">
+
+        <button id="menu-mute-btn" class="menu-mute-btn" type="button" aria-label="Toggle sound">🔊</button>
 
         <div class="menu-card ui-panel">
 
@@ -57,8 +61,6 @@
         </div>
 
       </div>
-
-      <canvas id="menu-ball-canvas" class="hidden"></canvas>
 
       <div id="how-to-play" class="hidden">
 
@@ -89,8 +91,6 @@
       </div>
 
       <div id="game-over" class="hidden"></div>
-
-      <button id="mute-btn" type="button" aria-label="Toggle sound">🔊</button>
 
       <div id="publisher">Basket Hop</div>
 

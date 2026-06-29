@@ -2,13 +2,15 @@ export class MainMenu {
   private root: HTMLElement;
   private howToRoot: HTMLElement;
   private bestEl: HTMLElement;
+  private muteBtn: HTMLButtonElement;
   private onStart: () => void;
 
-  constructor(onStart: () => void) {
+  constructor(onStart: () => void, onMuteToggle?: () => void) {
     this.onStart = onStart;
     this.root = document.getElementById('main-menu')!;
     this.howToRoot = document.getElementById('how-to-play')!;
     this.bestEl = this.root.querySelector('#menu-best')!;
+    this.muteBtn = this.root.querySelector('#menu-mute-btn') as HTMLButtonElement;
 
     this.root.querySelector('#start-btn')!.addEventListener('click', () => {
       this.hideHowTo();
@@ -27,6 +29,16 @@ export class MainMenu {
     this.howToRoot.addEventListener('click', (e) => {
       if (e.target === this.howToRoot) this.hideHowTo();
     });
+
+    this.muteBtn.addEventListener('click', () => {
+      onMuteToggle?.();
+    });
+  }
+
+  setMuted(muted: boolean): void {
+    this.muteBtn.textContent = muted ? '🔇' : '🔊';
+    this.muteBtn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+    this.muteBtn.setAttribute('title', muted ? 'Sound off' : 'Sound on');
   }
 
   show(bestScore: number): void {
