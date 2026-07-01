@@ -9,13 +9,20 @@ import {
   SCROLL_SPEED,
 } from './constants';
 import { createColliders } from './collision';
+import { debugLog } from './debug';
 import { createHoop, onBasket, syncHoopToCamera, updateHoop } from './hoop';
 import { resetHoopNet, updateHoopNet } from './netPhysics';
 import type { LaunchMechanic } from './mechanics/LaunchMechanic';
 import { clampDt, integrateBall } from './physics';
 import { clearParticles, spawnBurst, updateParticles } from './particles';
 import { applyScore, checkScore } from './scoring';
+import { HOOP_GEOMETRY } from './palette';
 import { GamePhase, type Ball, type FloatingText, type Hoop, type RunStats } from './types';
+
+function rimLineY(hoopY: number): number {
+  const { offsetY, thickness } = HOOP_GEOMETRY.rimLeft;
+  return hoopY + offsetY + thickness;
+}
 
 export interface GameCallbacks {
   onScore(points: number, isSwish: boolean): void;
@@ -123,6 +130,9 @@ export class Game {
     }
 
     this.ball.comboAtShot = this.stats.combo;
+    if (this.ball.fallingThrough) {
+      this.clearFallThrough('tap');
+    }
     this.callbacks.onTap();
   }
 
@@ -147,12 +157,29 @@ export class Game {
     syncHoopToCamera(this.hoop, this.climbOffset);
   }
 
+  private clearFallThrough(reason: string): void {
+    if (!this.ball.fallingThrough) return;
+    debugLog('fallThrough', 'cleared', {
+      reason,
+      level: this.stats.level,
+      ballY: this.ball.y.toFixed(0),
+      clearBelowY: this.clearBelowY.toFixed(0),
+      hoopY: this.hoop.y.toFixed(0),
+    });
+    this.ball.fallingThrough = false;
+    this.ball.scoredThisShot = false;
+    this.ball.hitRimThisShot = false;
+  }
+
   private tryClearFallThrough(): void {
     if (!this.ball.fallingThrough) return;
     if (this.ball.y > this.clearBelowY) {
-      this.ball.fallingThrough = false;
-      this.ball.scoredThisShot = false;
-      this.ball.hitRimThisShot = false;
+      this.clearFallThrough('belowHoop');
+      return;
+    }
+    // Next hoop is higher in world space — player jumps up before passing clearBelowY.
+    if (this.ball.y < rimLineY(this.hoop.y)) {
+      this.clearFallThrough('aboveRim');
     }
   }
 
@@ -197,6 +224,12 @@ export class Game {
 
       const scoreResult = checkScore(this.ball, this.hoop);
       if (scoreResult) {
+        debugLog('score', 'basket!', {
+          level: this.stats.level,
+          swish: scoreResult.isSwish,
+          ballY: this.ball.y.toFixed(0),
+          hoopY: this.hoop.y.toFixed(0),
+        });
         this.ball.scoredThisShot = true;
         this.ball.fallingThrough = true;
         this.clearBelowY = this.hoop.y + HOOP_CLEARANCE;

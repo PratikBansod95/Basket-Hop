@@ -1,5 +1,6 @@
 import { SfxEngine } from './audio/sfx';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from './game/constants';
+import { DEBUG } from './game/debug';
 import { Game } from './game/Game';
 import { GamePhase } from './game/types';
 import { DefaultTapLaunch } from './game/mechanics/defaultTapLaunch';
@@ -117,6 +118,11 @@ async function main(): Promise<void> {
     },
   });
 
+  if (DEBUG) {
+    (window as unknown as { __game: Game }).__game = game;
+    console.log('[debug] enabled — logs + collider overlay. Inspect: window.__game');
+  }
+
   platform.onPause(() => {
     paused = true;
     game.paused = true;
@@ -187,7 +193,7 @@ async function main(): Promise<void> {
         shake: game.shake,
         climbOffset: game.climbOffset,
         time: game.time,
-      });
+      }, DEBUG ? game.colliders : undefined);
     }
   }
   requestAnimationFrame(loop);

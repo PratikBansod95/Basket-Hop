@@ -35,6 +35,13 @@ export function updateColliders(colliders: HoopColliders, x: number, y: number, 
   colliders.backboard.top = y - bb.offsetTop;
   colliders.backboard.bottom = y + (bb.height - bb.offsetTop);
 
+  // Slight padding on the court-facing face for bank shots.
+  if (side === 'right') {
+    colliders.backboard.left -= 10;
+  } else {
+    colliders.backboard.right += 10;
+  }
+
   colliders.rimLeft.top = y + rl.offsetY;
   colliders.rimLeft.bottom = y + rl.offsetY + rl.thickness;
   if (side === 'right') {
@@ -89,9 +96,7 @@ interface HitResult {
   normalY: number;
 }
 
-function resolveRectHit(
-  _prevX: number,
-  _prevY: number,
+function resolveCircleRectOverlap(
   x: number,
   y: number,
   radius: number,
@@ -135,6 +140,86 @@ function resolveRectHit(
   }
 
   return { x: outX, y: outY, face, normalX: nx, normalY: ny };
+}
+
+/** Swept circle vs AABB — catches fast shots that tunnel through thin colliders. */
+function resolveSweptCircleRect(
+  prevX: number,
+  prevY: number,
+  x: number,
+  y: number,
+  radius: number,
+  rect: Rect,
+): HitResult | null {
+  const atEnd = resolveCircleRectOverlap(x, y, radius, rect);
+  if (atEnd) return atEnd;
+
+  const dx = x - prevX;
+  const dy = y - prevY;
+  if (dx === 0 && dy === 0) return null;
+
+  const pad = radius;
+  const minX = rect.left - pad;
+  const maxX = rect.right + pad;
+  const minY = rect.top - pad;
+  const maxY = rect.bottom + pad;
+
+  let t0 = 0;
+  let t1 = 1;
+  let enterFace: HitResult['face'] = 'left';
+
+  const clip = (p: number, q: number, face: HitResult['face']): boolean => {
+    if (p === 0) return q >= 0;
+    const r = q / p;
+    if (p < 0) {
+      if (r > t0) {
+        t0 = r;
+        enterFace = face;
+      }
+    } else if (r < t1) {
+      t1 = r;
+    }
+    return t0 <= t1;
+  };
+
+  if (!clip(-dx, prevX - minX, 'left')) return null;
+  if (!clip(dx, maxX - prevX, 'right')) return null;
+  if (!clip(-dy, prevY - minY, 'top')) return null;
+  if (!clip(dy, maxY - prevY, 'bottom')) return null;
+
+  if (t0 < 0 || t0 > 1) return null;
+
+  let nx = 0;
+  let ny = 0;
+  let outX = prevX + dx * t0;
+  let outY = prevY + dy * t0;
+
+  if (enterFace === 'left') {
+    nx = -1;
+    outX = rect.left - radius - 0.1;
+  } else if (enterFace === 'right') {
+    nx = 1;
+    outX = rect.right + radius + 0.1;
+  } else if (enterFace === 'top') {
+    ny = -1;
+    outY = rect.top - radius - 0.1;
+  } else {
+    ny = 1;
+    outY = rect.bottom + radius + 0.1;
+  }
+
+  return { x: outX, y: outY, face: enterFace, normalX: nx, normalY: ny };
+}
+
+function resolveRectHit(
+  prevX: number,
+  prevY: number,
+  x: number,
+  y: number,
+  radius: number,
+  rect: Rect,
+): HitResult | null {
+  return resolveSweptCircleRect(prevX, prevY, x, y, radius, rect);
 }
 
 export type ColliderKey = 'backboard' | 'rimLeft' | 'rimRight' | 'corner';

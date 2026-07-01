@@ -16,6 +16,7 @@ import {
   resolveColliderHit,
   updateColliders,
 } from './collision';
+import { debugLog } from './debug';
 import type { Ball, Hoop } from './types';
 
 export function clampDt(dt: number, max = 0.1): number {
@@ -55,7 +56,7 @@ export function integrateBall(
   updateColliders(colliders, hoop.x, hoop.y, hoop.side);
 
   const speed = Math.hypot(ball.vx, ball.vy);
-  const maxStep = ball.radius * 0.5;
+  const maxStep = ball.radius * 0.35;
   const steps = Math.max(1, Math.ceil((speed * dt) / maxStep));
   const stepDt = dt / steps;
 
@@ -65,9 +66,7 @@ export function integrateBall(
     ball.x += ball.vx * stepDt;
     ball.y += ball.vy * stepDt;
 
-    if (!ball.fallingThrough) {
-      resolveHoopHits(ball, px, py, colliders, hoop, onRimHit, onBounce);
-    }
+    resolveHoopHits(ball, px, py, colliders, hoop, onRimHit, onBounce);
 
     if (ball.x + ball.radius < 0) ball.x = CANVAS_WIDTH + ball.radius;
     if (ball.x - ball.radius > CANVAS_WIDTH) ball.x = -ball.radius;
@@ -110,10 +109,19 @@ function resolveHoopHits(
   onRimHit: () => void,
   onBounce: () => void,
 ): void {
-  const keys: ColliderKey[] = ['backboard', 'rimLeft', 'rimRight', 'corner'];
+  // After a score the ball falls through the rim, but the backboard must still bounce bank shots.
+  const keys: ColliderKey[] = ball.fallingThrough
+    ? ['backboard']
+    : ['backboard', 'rimLeft', 'rimRight', 'corner'];
   for (const key of keys) {
     const hit = resolveColliderHit(px, py, ball.x, ball.y, ball.radius, colliders, key);
     if (!hit) continue;
+
+    debugLog('hit', key, ball.fallingThrough ? '(fall-through)' : '', {
+      face: hit.face,
+      x: ball.x.toFixed(0),
+      y: ball.y.toFixed(0),
+    });
 
     ball.x = hit.x;
     ball.y = hit.y;

@@ -1,4 +1,6 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH, FLOOR_Y, screenY } from './constants';
+import type { HoopColliders } from './collision';
+import { drawDebugColliders } from './debug';
 import { drawDangerZones } from './dangerZoneRenderer';
 import { drawWorld } from './worldRenderer';
 import { drawSkyScreen } from './skyRenderer';
@@ -36,6 +38,7 @@ export function render(
   hoop: Hoop,
   floatingTexts: FloatingText[],
   state: RenderState,
+  colliders?: HoopColliders,
 ): void {
   const shakeX = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
   const shakeY = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
@@ -59,6 +62,7 @@ export function render(
   drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, FLOOR_Y);
   drawBall(ctx, ball.x, ballDrawY, ball.radius, ball.rotation);
   drawHoopRim(ctx, hoop);
+  if (colliders) drawDebugColliders(ctx, colliders);
 
   ctx.restore();
 
