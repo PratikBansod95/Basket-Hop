@@ -2,6 +2,7 @@ import { SfxEngine } from './audio/sfx';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from './game/constants';
 import { DEBUG } from './game/debug';
 import { Game } from './game/Game';
+import { createTutorialState, shouldRunTutorial } from './game/tutorial';
 import { GamePhase } from './game/types';
 import { DefaultTapLaunch } from './game/mechanics/defaultTapLaunch';
 import { render, renderLoading } from './game/renderer';
@@ -28,6 +29,11 @@ async function main(): Promise<void> {
   let saveData: SaveData = await platform.loadSave();
   let userMuted = false;
   let platformAudio = platform.isAudioEnabled();
+  const tutorialEnabled = shouldRunTutorial(saveData);
+  if (tutorialEnabled) {
+    saveData = { ...saveData, tutorialSeen: true };
+    void platform.saveSave(saveData);
+  }
 
   const sfx = new SfxEngine();
   const hud = new Hud();
@@ -116,7 +122,7 @@ async function main(): Promise<void> {
       void platform.saveSave(saveData);
       gameOverModal.show(stats, saveData);
     },
-  });
+  }, createTutorialState(tutorialEnabled));
 
   if (DEBUG) {
     (window as unknown as { __game: Game }).__game = game;
@@ -182,7 +188,7 @@ async function main(): Promise<void> {
     game.update(dt);
     const inGame = game.phase !== GamePhase.Menu;
     appRoot.classList.toggle('in-game', inGame);
-    hud.update(game.stats, game.phase, game.ball.hasLaunched);
+    hud.update(game.stats, game.phase, game.ball.hasLaunched, game.tutorialPrompt, game.stamina);
     if (game.phase === GamePhase.Menu) {
       renderMenuScene(ctx, game.time);
       renderMenuBall(menuBallCtx, game.time);

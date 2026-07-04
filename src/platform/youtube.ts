@@ -10,6 +10,7 @@ function parseSave(raw: string | null): SaveData {
       totalGames: data.totalGames ?? 0,
       totalShots: data.totalShots ?? 0,
       cleanShots: data.cleanShots ?? 0,
+      tutorialSeen: data.tutorialSeen ?? false,
     };
   } catch {
     return { ...DEFAULT_SAVE };

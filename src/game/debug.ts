@@ -1,6 +1,8 @@
 import type { HoopColliders, Rect } from './collision';
 
-export const DEBUG = new URLSearchParams(location.search).has('debug');
+const search = typeof location === 'undefined' ? '' : location.search;
+
+export const DEBUG = new URLSearchParams(search).has('debug');
 
 export function debugLog(tag: string, ...args: unknown[]): void {
   if (!DEBUG) return;

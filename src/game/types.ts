@@ -7,6 +7,8 @@ export enum GamePhase {
   GameOver = 'gameover',
 }
 
+export type PauseSource = 'none' | 'platform' | 'tutorial';
+
 export interface Vec2 {
   x: number;
   y: number;
@@ -60,6 +62,24 @@ export interface RunStats {
   totalShots: number;
   hasScoredOnce: boolean;
   level: number;
+}
+
+export interface TutorialState {
+  enabled: boolean;
+  stepsCompleted: number;
+  maxSteps: number;
+  awaitingSuccess: boolean;
+  prompt: string | null;
+}
+
+export interface StaminaState {
+  active: boolean;
+  current: number;
+  max: number;
+  drainPerTap: number;
+  regenPerSecond: number;
+  basketRestore: number;
+  blockedFeedback: number;
 }
 
 export interface GameSnapshot {

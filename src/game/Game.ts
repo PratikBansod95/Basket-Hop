@@ -7,6 +7,12 @@ import {
   INITIAL_CLIMB_OFFSET,
   isBallOffScreen,
   SCROLL_SPEED,
+  STAMINA_BASKET_RESTORE,
+  STAMINA_BLOCKED_FEEDBACK_DURATION,
+  STAMINA_DRAIN_PER_TAP,
+  STAMINA_MAX,
+  STAMINA_REGEN_PER_SECOND,
+  STAMINA_UNLOCK_BASKETS,
 } from './constants';
 import { createColliders } from './collision';
 import { debugLog } from './debug';
@@ -17,7 +23,22 @@ import { clampDt, integrateBall } from './physics';
 import { clearParticles, spawnBurst, updateParticles } from './particles';
 import { applyScore, checkScore } from './scoring';
 import { HOOP_GEOMETRY } from './palette';
-import { GamePhase, type Ball, type FloatingText, type Hoop, type RunStats } from './types';
+import {
+  createTutorialProbe,
+  createTutorialState,
+  getTutorialPrompt,
+  shouldPauseForTutorial,
+} from './tutorial';
+import {
+  GamePhase,
+  type Ball,
+  type FloatingText,
+  type Hoop,
+  type PauseSource,
+  type RunStats,
+  type StaminaState,
+  type TutorialState,
+} from './types';
 
 function rimLineY(hoopY: number): number {
   const { offsetY, thickness } = HOOP_GEOMETRY.rimLeft;
@@ -63,22 +84,36 @@ function createStats(): RunStats {
   };
 }
 
+function createStaminaState(): StaminaState {
+  return {
+    active: false,
+    current: STAMINA_MAX,
+    max: STAMINA_MAX,
+    drainPerTap: STAMINA_DRAIN_PER_TAP,
+    regenPerSecond: STAMINA_REGEN_PER_SECOND,
+    basketRestore: STAMINA_BASKET_RESTORE,
+    blockedFeedback: 0,
+  };
+}
+
 export class Game {
   phase: GamePhase = GamePhase.Menu;
-  ball: Ball = createBall();
   hoop: Hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
+  ball: Ball = createBall();
   stats: RunStats = createStats();
   floatingTexts: FloatingText[] = [];
   shake = 0;
   shakeTimer = 0;
-  paused = false;
   colliders = createColliders();
+  stamina: StaminaState = createStaminaState();
+  tutorial: TutorialState;
 
   climbOffset = INITIAL_CLIMB_OFFSET;
   targetClimbOffset = INITIAL_CLIMB_OFFSET;
   climbAnimating = false;
   time = 0;
 
+  private platformPaused = false;
   private firstTapDone = false;
   private bounceCooldown = 0;
   private clearBelowY = 0;
@@ -86,26 +121,49 @@ export class Game {
   constructor(
     private launchMechanic: LaunchMechanic,
     private callbacks: GameCallbacks,
-  ) {}
+    tutorialState: TutorialState = createTutorialState(false),
+  ) {
+    this.tutorial = tutorialState;
+  }
+
+  set paused(value: boolean) {
+    this.platformPaused = value;
+  }
+
+  get paused(): boolean {
+    return this.pauseSource !== 'none';
+  }
+
+  get pauseSource(): PauseSource {
+    if (this.platformPaused) return 'platform';
+    if (this.tutorial.prompt) return 'tutorial';
+    return 'none';
+  }
+
+  get tutorialPrompt(): string | null {
+    return this.tutorial.prompt;
+  }
 
   reset(): void {
     this.phase = GamePhase.Idle;
+    this.hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
     this.ball = createBall();
     this.climbOffset = INITIAL_CLIMB_OFFSET;
     this.targetClimbOffset = INITIAL_CLIMB_OFFSET;
     this.climbAnimating = false;
     this.time = 0;
-    this.hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
     resetHoopNet(this.hoop);
     this.stats = createStats();
     this.floatingTexts = [];
     this.shake = 0;
     this.shakeTimer = 0;
+    this.stamina = createStaminaState();
     this.firstTapDone = false;
     this.bounceCooldown = 0;
     this.clearBelowY = 0;
     clearParticles();
     this.launchMechanic.reset();
+    this.resetTutorialRunState();
   }
 
   returnToMenu(): void {
@@ -113,26 +171,122 @@ export class Game {
     this.phase = GamePhase.Menu;
   }
 
-  handleTap(): void {
-    if (this.paused || this.phase === GamePhase.GameOver || this.phase === GamePhase.Menu) return;
+  private resetTutorialRunState(): void {
+    this.tutorial.prompt = null;
+    this.tutorial.awaitingSuccess = false;
+  }
 
+  private beginShotAttempt(): void {
+    this.stats.totalShots += 1;
+  }
+
+  private unlockStaminaIfNeeded(): void {
+    if (this.stamina.active || this.stats.level < STAMINA_UNLOCK_BASKETS) return;
+    this.stamina.active = true;
+  }
+
+  private spendStaminaForTap(): number | null {
+    if (!this.stamina.active) return 1;
+    if (this.stamina.current <= 0) return null;
+    const strength = Math.min(1, this.stamina.current / this.stamina.drainPerTap);
+    this.stamina.current = Math.max(0, this.stamina.current - this.stamina.drainPerTap);
+    this.stamina.blockedFeedback = 0;
+    return strength;
+  }
+
+  private restoreStaminaFromBasket(): void {
+    if (!this.stamina.active) return;
+    this.stamina.current = Math.min(this.stamina.max, this.stamina.current + this.stamina.basketRestore);
+    this.stamina.blockedFeedback = 0;
+  }
+
+  private triggerStaminaBlockedFeedback(): void {
+    if (!this.stamina.active) return;
+    this.stamina.blockedFeedback = STAMINA_BLOCKED_FEEDBACK_DURATION;
+  }
+
+  private updateStamina(dt: number): void {
+    this.unlockStaminaIfNeeded();
+    if (this.stamina.blockedFeedback > 0) {
+      this.stamina.blockedFeedback = Math.max(0, this.stamina.blockedFeedback - dt);
+    }
+    if (!this.stamina.active || this.phase !== GamePhase.Playing) return;
+    if (!this.ball.hasLaunched) return;
+    if (this.stamina.current >= this.stamina.max) return;
+    this.stamina.current = Math.min(this.stamina.max, this.stamina.current + this.stamina.regenPerSecond * dt);
+  }
+
+  private showStaminaEmptyFeedback(): void {
+    this.triggerStaminaBlockedFeedback();
+    this.floatingTexts.push({
+      x: this.ball.x,
+      y: this.ball.y - 55,
+      text: 'STAMINA EMPTY',
+      life: 0.9,
+      vy: -35,
+      color: '#94a3b8',
+    });
+  }
+
+  private pauseForTutorial(): void {
+    this.tutorial.prompt = getTutorialPrompt(this.tutorial.stepsCompleted);
+  }
+
+  private resumeFromTutorial(): void {
+    this.tutorial.prompt = null;
+    if (this.tutorial.stepsCompleted === 0) {
+      this.tutorial.awaitingSuccess = true;
+      return;
+    }
+    this.completeTutorialStep();
+    this.tutorial.awaitingSuccess = false;
+  }
+
+  private completeTutorialStep(): void {
+    if (!this.tutorial.enabled) return;
+    this.tutorial.stepsCompleted += 1;
+    if (this.tutorial.stepsCompleted >= this.tutorial.maxSteps) {
+      this.tutorial.enabled = false;
+      this.tutorial.awaitingSuccess = false;
+      this.tutorial.prompt = null;
+    }
+  }
+
+  handleTap(): void {
+    if (this.pauseSource === 'platform' || this.phase === GamePhase.GameOver || this.phase === GamePhase.Menu) return;
+    if (this.pauseSource === 'tutorial') {
+      this.resumeFromTutorial();
+    }
+
+    this.unlockStaminaIfNeeded();
     const isFirstTap = !this.firstTapDone;
     if (isFirstTap) {
       this.firstTapDone = true;
       this.phase = GamePhase.Playing;
+      this.beginShotAttempt();
     }
 
-    const ctx = { ball: this.ball, hoop: this.hoop, isFirstTap };
+    let staminaStrength = 1;
+    if (!isFirstTap) {
+      const spent = this.spendStaminaForTap();
+      if (spent === null) {
+        this.showStaminaEmptyFeedback();
+        return;
+      }
+      staminaStrength = spent;
+    }
+
+    const ctx = { ball: this.ball, hoop: this.hoop, isFirstTap, staminaStrength };
     if (isFirstTap) {
       this.launchMechanic.onFirstTap(ctx);
     } else {
+      if (this.ball.fallingThrough) {
+        this.clearFallThrough('tap');
+      }
       this.launchMechanic.onTap(ctx);
     }
 
     this.ball.comboAtShot = this.stats.combo;
-    if (this.ball.fallingThrough) {
-      this.clearFallThrough('tap');
-    }
     this.callbacks.onTap();
   }
 
@@ -183,6 +337,22 @@ export class Game {
     }
   }
 
+  private maybePauseForTutorial(): void {
+    if (!this.tutorial.enabled) return;
+    const probe = createTutorialProbe(
+      this.phase,
+      this.ball,
+      this.hoop,
+      this.stats,
+      this.climbOffset,
+      this.targetClimbOffset,
+      this.climbAnimating,
+    );
+    if (shouldPauseForTutorial(this.tutorial, probe, this.launchMechanic)) {
+      this.pauseForTutorial();
+    }
+  }
+
   update(rawDt: number): void {
     if (this.paused) return;
     const dt = clampDt(rawDt);
@@ -190,6 +360,7 @@ export class Game {
 
     if (this.phase === GamePhase.Menu) return;
 
+    this.updateStamina(dt);
     this.updateClimb(dt);
 
     if (this.phase === GamePhase.Playing) {
@@ -224,6 +395,10 @@ export class Game {
 
       const scoreResult = checkScore(this.ball, this.hoop);
       if (scoreResult) {
+        if (this.tutorial.awaitingSuccess) {
+          this.completeTutorialStep();
+          this.tutorial.awaitingSuccess = false;
+        }
         debugLog('score', 'basket!', {
           level: this.stats.level,
           swish: scoreResult.isSwish,
@@ -235,8 +410,11 @@ export class Game {
         this.clearBelowY = this.hoop.y + HOOP_CLEARANCE;
 
         applyScore(scoreResult, this.stats, this.ball, this.floatingTexts);
+        this.beginShotAttempt();
 
         this.stats.level += 1;
+        this.unlockStaminaIfNeeded();
+        this.restoreStaminaFromBasket();
         this.targetClimbOffset += CLIMB_PER_BASKET;
         this.climbAnimating = true;
 
@@ -255,7 +433,10 @@ export class Game {
         if (scoreResult.isSwish) this.callbacks.onSwoosh();
       }
 
+      this.maybePauseForTutorial();
+
       if (this.ball.hasLaunched && isBallOffScreen(this.ball.y, this.ball.radius, this.climbOffset)) {
+        this.resetTutorialRunState();
         this.phase = GamePhase.GameOver;
         this.callbacks.onGameOver(this.stats);
       }

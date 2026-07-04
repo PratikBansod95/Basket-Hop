@@ -42,7 +42,7 @@ export class MainMenu {
   }
 
   show(bestScore: number): void {
-    this.bestEl.textContent = `BEST ${bestScore}`;
+    this.bestEl.textContent = `Best ${bestScore}`;
     this.root.classList.remove('hidden');
   }
 

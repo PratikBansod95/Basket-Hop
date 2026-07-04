@@ -50,6 +50,18 @@ export const CLIMB_PER_BASKET = 240;
 
 export const SCROLL_SPEED = 520;
 
+export const STAMINA_UNLOCK_BASKETS = 5;
+
+export const STAMINA_MAX = 100;
+
+export const STAMINA_DRAIN_PER_TAP = 22;
+
+export const STAMINA_REGEN_PER_SECOND = 15;
+
+export const STAMINA_BASKET_RESTORE = 48;
+
+export const STAMINA_BLOCKED_FEEDBACK_DURATION = 0.45;
+
 export const HOOP_SCREEN_Y = 460;
 
 export const HOOP_CLEARANCE = 140;
@@ -94,7 +106,7 @@ export const COURT_CENTER_Y = Math.round((OPEN_COURT_TOP + WORLD.courtFloorY) / 
 
 
 
-export const BALL_SPAWN_X = WORLD.spawnX;
+export const BALL_SPAWN_X = 305;
 
 export const FLOOR_Y = WORLD.courtFloorY;
 
@@ -108,7 +120,7 @@ export const INITIAL_CLIMB_OFFSET = COURT_FLOOR_SCREEN_Y - WORLD.courtFloorY;
 
 /** Ball screen Y at idle start — center court key (marked circle). */
 
-export const BALL_START_SCREEN_Y = 835;
+export const BALL_START_SCREEN_Y = 712;
 
 export const BALL_SPAWN_Y = BALL_START_SCREEN_Y - INITIAL_CLIMB_OFFSET;
 

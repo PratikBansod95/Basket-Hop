@@ -39,15 +39,11 @@ export class GameOverModal {
     const isNewBest = stats.score >= save.best && stats.score > 0;
     this.root.innerHTML = `
       <div class="modal ui-panel">
-        <div class="title">GAME OVER</div>
-        <div class="record-badge${isNewBest ? ' visible' : ''}">NEW BEST</div>
-        <div class="score-label">FINAL SCORE</div>
+        <div class="title">Game over</div>
+        <div class="record-badge${isNewBest ? ' visible' : ''}">New best</div>
+        <div class="score-label">Final score</div>
         <div class="score-value">${stats.score}</div>
         <div class="stats-grid">
-          <div class="ui-stat-chip">
-            <span class="label">Level</span>
-            <span class="value">${stats.level + 1}</span>
-          </div>
           <div class="ui-stat-chip">
             <span class="label">Best</span>
             <span class="value">${best}</span>
@@ -56,15 +52,11 @@ export class GameOverModal {
             <span class="label">Clean</span>
             <span class="value">${cleanPct}%</span>
           </div>
-          <div class="ui-stat-chip">
-            <span class="label">Combo</span>
-            <span class="value">x${Math.max(1, stats.combo)}</span>
-          </div>
         </div>
         <div class="modal-actions">
-          <button class="retry-btn" id="retry-btn" type="button">RETRY</button>
-          <button class="menu-home-btn" id="menu-btn" type="button">MAIN MENU</button>
-          <button class="cta-btn" id="cta-btn" type="button">PLAY FULL GAME</button>
+          <button class="retry-btn" id="retry-btn" type="button">Retry</button>
+          <button class="menu-home-btn" id="menu-btn" type="button">Main menu</button>
+          <button class="cta-btn" id="cta-btn" type="button">Play full game</button>
         </div>
       </div>
     `;

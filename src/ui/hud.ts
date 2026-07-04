@@ -1,4 +1,4 @@
-import type { RunStats } from '../game/types';
+import type { RunStats, StaminaState } from '../game/types';
 
 export class Hud {
   private root: HTMLElement;
@@ -6,6 +6,9 @@ export class Hud {
   private scoreWrap: HTMLElement;
   private streakEl: HTMLElement;
   private hintEl: HTMLElement;
+  private staminaEl: HTMLElement;
+  private staminaFillEl: HTMLElement;
+  private staminaValueEl: HTMLElement;
   private lastScore = -1;
 
   constructor(rootId = 'hud') {
@@ -18,20 +21,38 @@ export class Hud {
       </div>
       <div class="streak-badge" id="streak-badge">
         <span class="streak-icon">🔥</span>
-        <span id="streak-text">HOT x2</span>
+        <span id="streak-text">Hot x2</span>
+      </div>
+      <div class="stamina-meter" id="stamina-meter">
+        <div class="stamina-meter-header">
+          <span class="stamina-label">Stamina</span>
+          <span class="stamina-value" id="stamina-value">100%</span>
+        </div>
+        <div class="stamina-track">
+          <div class="stamina-fill" id="stamina-fill"></div>
+        </div>
       </div>
       <div class="hint-pill" id="hint-pill">
         <span class="hint-icon">👆</span>
-        <span class="hint-text" id="hint">TAP TO GO UP</span>
+        <span class="hint-text" id="hint">Tap anywhere to play</span>
       </div>
     `;
     this.scoreWrap = this.root.querySelector('#score-wrap')!;
     this.scoreEl = this.root.querySelector('#score-pill')!;
     this.streakEl = this.root.querySelector('#streak-badge')!;
     this.hintEl = this.root.querySelector('#hint-pill')!;
+    this.staminaEl = this.root.querySelector('#stamina-meter')!;
+    this.staminaFillEl = this.root.querySelector('#stamina-fill')!;
+    this.staminaValueEl = this.root.querySelector('#stamina-value')!;
   }
 
-  update(stats: RunStats, phase: string, ballLaunched: boolean): void {
+  update(
+    stats: RunStats,
+    phase: string,
+    ballLaunched: boolean,
+    tutorialPrompt: string | null = null,
+    stamina: StaminaState | null = null,
+  ): void {
     const inGame = phase !== 'menu';
     this.root.style.display = inGame ? 'block' : 'none';
     if (!inGame) return;
@@ -49,18 +70,33 @@ export class Hud {
     const streakText = this.root.querySelector('#streak-text')!;
     if (stats.combo >= 2) {
       this.scoreWrap.classList.add('hot');
-      streakText.textContent = `HOT x${stats.combo}`;
+      streakText.textContent = `Hot x${stats.combo}`;
       this.streakEl.classList.add('visible');
     } else {
       this.scoreWrap.classList.remove('hot');
       this.streakEl.classList.remove('visible');
     }
 
-    const showHint = phase === 'idle' || (phase === 'playing' && !ballLaunched);
+    const showStamina = !!stamina?.active;
+    this.staminaEl.classList.toggle('visible', showStamina);
+    if (stamina) {
+      const ratio = Math.max(0, Math.min(1, stamina.current / stamina.max));
+      this.staminaFillEl.style.width = `${ratio * 100}%`;
+      this.staminaValueEl.textContent = `${Math.round(ratio * 100)}%`;
+      this.staminaEl.classList.toggle('low', ratio <= 0.35);
+      this.staminaEl.classList.toggle('blocked', stamina.blockedFeedback > 0);
+    } else {
+      this.staminaEl.classList.remove('low', 'blocked');
+      this.staminaFillEl.style.width = '100%';
+      this.staminaValueEl.textContent = '100%';
+    }
+
+    const showHint = !!tutorialPrompt || phase === 'idle' || (phase === 'playing' && !ballLaunched);
     this.hintEl.style.display = showHint ? 'inline-flex' : 'none';
+    this.hintEl.classList.toggle('tutorial-prompt', !!tutorialPrompt);
     if (showHint) {
       const hintText = this.hintEl.querySelector('#hint')!;
-      hintText.textContent = stats.hasScoredOnce ? 'TAP TO CLIMB' : 'TAP TO GO UP';
+      hintText.textContent = tutorialPrompt ?? (stats.hasScoredOnce ? 'Tap to climb' : 'Tap anywhere to play');
     }
   }
 }

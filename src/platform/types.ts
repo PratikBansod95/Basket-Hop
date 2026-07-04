@@ -3,6 +3,7 @@ export interface SaveData {
   totalGames: number;
   totalShots: number;
   cleanShots: number;
+  tutorialSeen: boolean;
 }
 
 export const DEFAULT_SAVE: SaveData = {
@@ -10,6 +11,7 @@ export const DEFAULT_SAVE: SaveData = {
   totalGames: 0,
   totalShots: 0,
   cleanShots: 0,
+  tutorialSeen: false,
 };
 
 export interface Platform {

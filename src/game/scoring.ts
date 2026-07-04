@@ -32,7 +32,7 @@ export function checkScore(ball: Ball, hoop: Hoop): ScoreResult | null {
       if (isSwish) {
         const combo = ball.comboAtShot + 1;
         points = combo;
-        displayText = combo > 1 ? `SWISH x${combo}!` : 'SWISH!';
+        displayText = combo > 1 ? `Swish x${combo}!` : 'Swish!';
       } else {
         points = 1;
         displayText = '+1';
@@ -49,7 +49,6 @@ export function applyScore(
   ball: Ball,
   floatingTexts: FloatingText[],
 ): void {
-  stats.totalShots += 1;
   if (result.isSwish) {
     stats.combo += 1;
     stats.cleanShots += 1;

@@ -5,6 +5,8 @@ export interface TapContext {
   ball: Ball;
   hoop: Hoop;
   isFirstTap: boolean;
+  /** 0-1 control power from the stamina meter (mid-air only). */
+  staminaStrength?: number;
 }
 
 export interface LaunchMechanic {
