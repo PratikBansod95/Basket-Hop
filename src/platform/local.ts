@@ -1,24 +1,8 @@
-import { DEFAULT_SAVE, type Platform, type SaveData } from './types';
+import { DEFAULT_SAVE, parseSaveData, type Platform, type SaveData } from './types';
 
 const STORAGE_KEY = 'basket-hop-save';
 const LEGACY_STORAGE_KEY = 'basket-drop-save';
 let sessionSave: SaveData | null = null;
-
-function parseSave(raw: string | null): SaveData {
-  if (!raw) return { ...DEFAULT_SAVE };
-  try {
-    const data = JSON.parse(raw) as Partial<SaveData>;
-    return {
-      best: data.best ?? 0,
-      totalGames: data.totalGames ?? 0,
-      totalShots: data.totalShots ?? 0,
-      cleanShots: data.cleanShots ?? 0,
-      tutorialSeen: data.tutorialSeen ?? false,
-    };
-  } catch {
-    return { ...DEFAULT_SAVE };
-  }
-}
 
 export function createLocalPlatform(): Platform {
   const adsMode = import.meta.env.MODE === 'ads';
@@ -27,7 +11,7 @@ export function createLocalPlatform(): Platform {
     async loadSave() {
       if (adsMode) return sessionSave ? { ...sessionSave } : { ...DEFAULT_SAVE };
       const saved = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY);
-      const data = parseSave(saved);
+      const data = parseSaveData(saved);
       if (!localStorage.getItem(STORAGE_KEY) && saved) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }

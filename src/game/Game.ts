@@ -14,6 +14,7 @@ import {
   STAMINA_REGEN_PER_SECOND,
   STAMINA_UNLOCK_BASKETS,
 } from './constants';
+import { generateCoinsForHoop } from './coins';
 import { createColliders } from './collision';
 import { debugLog } from './debug';
 import { createHoop, onBasket, syncHoopToCamera, updateHoop } from './hoop';
@@ -32,6 +33,7 @@ import {
 import {
   GamePhase,
   type Ball,
+  type Coin,
   type FloatingText,
   type Hoop,
   type PauseSource,
@@ -100,6 +102,8 @@ export class Game {
   phase: GamePhase = GamePhase.Menu;
   hoop: Hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
   ball: Ball = createBall();
+  coins: Coin[] = [];
+  runCoins = 0;
   stats: RunStats = createStats();
   floatingTexts: FloatingText[] = [];
   shake = 0;
@@ -117,6 +121,7 @@ export class Game {
   private firstTapDone = false;
   private bounceCooldown = 0;
   private clearBelowY = 0;
+  private pendingCoinRespawn = false;
 
   constructor(
     private launchMechanic: LaunchMechanic,
@@ -154,6 +159,8 @@ export class Game {
     this.time = 0;
     resetHoopNet(this.hoop);
     this.stats = createStats();
+    this.respawnCoinsForCurrentHoop();
+    this.runCoins = 0;
     this.floatingTexts = [];
     this.shake = 0;
     this.shakeTimer = 0;
@@ -161,6 +168,7 @@ export class Game {
     this.firstTapDone = false;
     this.bounceCooldown = 0;
     this.clearBelowY = 0;
+    this.pendingCoinRespawn = false;
     clearParticles();
     this.launchMechanic.reset();
     this.resetTutorialRunState();
@@ -178,6 +186,38 @@ export class Game {
 
   private beginShotAttempt(): void {
     this.stats.totalShots += 1;
+  }
+
+  private respawnCoinsForCurrentHoop(): void {
+    this.coins = generateCoinsForHoop(this.hoop, this.stats.level, this.climbOffset);
+  }
+
+  private tryRespawnCoinsAfterTransition(): void {
+    if (!this.pendingCoinRespawn) return;
+    if (this.hoop.animating || this.climbAnimating) return;
+    this.pendingCoinRespawn = false;
+    this.respawnCoinsForCurrentHoop();
+  }
+
+  private collectCoins(): void {
+    for (const coin of this.coins) {
+      if (coin.collected) continue;
+      const dx = this.ball.x - coin.x;
+      const dy = this.ball.y - coin.y;
+      const touchRadius = this.ball.radius + coin.radius;
+      if (dx * dx + dy * dy > touchRadius * touchRadius) continue;
+
+      coin.collected = true;
+      this.runCoins += coin.value;
+      this.floatingTexts.push({
+        x: coin.x,
+        y: coin.y - 24,
+        text: `+${coin.value} coin`,
+        life: 0.95,
+        vy: -42,
+        color: '#ffd166',
+      });
+    }
   }
 
   private unlockStaminaIfNeeded(): void {
@@ -382,10 +422,12 @@ export class Game {
       updateHoopNet(this.hoop, this.ball, dt);
       updateParticles(dt);
       this.tryClearFallThrough();
+      this.collectCoins();
 
       if (!this.hoop.animating && !this.climbAnimating) {
         syncHoopToCamera(this.hoop, this.climbOffset);
       }
+      this.tryRespawnCoinsAfterTransition();
 
       if (bounced && this.bounceCooldown <= 0) {
         this.callbacks.onBounce();
@@ -419,6 +461,8 @@ export class Game {
         this.climbAnimating = true;
 
         onBasket(this.hoop, this.targetClimbOffset);
+        this.coins = [];
+        this.pendingCoinRespawn = true;
         resetHoopNet(this.hoop);
 
         spawnBurst(

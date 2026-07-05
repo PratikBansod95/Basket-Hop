@@ -4,6 +4,7 @@ export class Hud {
   private root: HTMLElement;
   private scoreEl: HTMLElement;
   private scoreWrap: HTMLElement;
+  private coinsEl: HTMLElement;
   private streakEl: HTMLElement;
   private hintEl: HTMLElement;
   private staminaEl: HTMLElement;
@@ -18,6 +19,11 @@ export class Hud {
         <div class="hud-score-wrap" id="score-wrap">
           <span class="hud-score" id="score-pill">0</span>
         </div>
+      </div>
+      <div class="coin-meter" id="coin-meter">
+        <span class="coin-meter-icon" aria-hidden="true"></span>
+        <span class="coin-meter-text">Coins</span>
+        <span class="coin-meter-value" id="coin-count">0</span>
       </div>
       <div class="streak-badge" id="streak-badge">
         <span class="streak-icon">🔥</span>
@@ -39,6 +45,7 @@ export class Hud {
     `;
     this.scoreWrap = this.root.querySelector('#score-wrap')!;
     this.scoreEl = this.root.querySelector('#score-pill')!;
+    this.coinsEl = this.root.querySelector('#coin-count')!;
     this.streakEl = this.root.querySelector('#streak-badge')!;
     this.hintEl = this.root.querySelector('#hint-pill')!;
     this.staminaEl = this.root.querySelector('#stamina-meter')!;
@@ -52,6 +59,7 @@ export class Hud {
     ballLaunched: boolean,
     tutorialPrompt: string | null = null,
     stamina: StaminaState | null = null,
+    runCoins = 0,
   ): void {
     const inGame = phase !== 'menu';
     this.root.style.display = inGame ? 'block' : 'none';
@@ -66,6 +74,8 @@ export class Hud {
       }
       this.lastScore = stats.score;
     }
+
+    this.coinsEl.textContent = String(runCoins);
 
     const streakText = this.root.querySelector('#streak-text')!;
     if (stats.combo >= 2) {

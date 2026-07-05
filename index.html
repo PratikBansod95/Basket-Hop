@@ -35,27 +35,82 @@
         </div>
         <div id="main-menu">
 
-        <button id="menu-mute-btn" class="menu-mute-btn" type="button" aria-label="Toggle sound">🔊</button>
+        <div class="menu-screen-bg" aria-hidden="true"></div>
 
-        <div class="menu-card ui-panel">
+        <button id="menu-mute-btn" class="menu-mute-btn" type="button" aria-label="Toggle sound">
+          <svg class="menu-mute-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M11 5L6 9H3v6h3l5 4V5zm2.5 2.5a6.5 6.5 0 010 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M15.5 8.5a4 4 0 010 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.75"/>
+          </svg>
+        </button>
 
-          <p class="ui-kicker">Arcade climber</p>
+        <header class="menu-logo" aria-label="Basket Hop">
+          <p class="menu-logo-kicker">
+            <span class="menu-logo-kicker-bit">Rooftop</span>
+            <span class="menu-logo-kicker-dot" aria-hidden="true">◆</span>
+            <span class="menu-logo-kicker-bit">Arcade</span>
+          </p>
+          <div class="menu-logo-lockup">
+            <span class="menu-logo-basket" aria-hidden="true">BASKET</span>
+            <span class="menu-logo-hop-wrap" aria-hidden="true">
+              <span class="menu-logo-hop-shadow">HOP</span>
+              <span class="menu-logo-hop">HOP</span>
+              <span class="menu-logo-arc" aria-hidden="true"></span>
+            </span>
+            <span class="menu-logo-orbit-ball" aria-hidden="true">🏀</span>
+          </div>
+          <p class="menu-logo-tagline">
+            <span>Shoot</span>
+            <span>Score</span>
+            <span>Climb</span>
+          </p>
+        </header>
 
-          <h1 class="ui-title">Basket <span class="accent">Hop</span></h1>
-
-          <p class="menu-tagline">Shoot, score, and climb.</p>
-
-          <div class="menu-best" id="menu-best">Best 0</div>
-
-          <div class="menu-actions">
-
-            <button class="ui-btn ui-btn-primary" id="start-btn" type="button">Start game</button>
-
-            <button class="ui-btn ui-btn-ghost" id="howto-btn" type="button">How to play</button>
-
+        <div class="menu-interactive">
+          <div class="menu-stats-row">
+            <div class="menu-best-badge">
+              <p class="menu-best-label"><span aria-hidden="true">★</span> Best score <span aria-hidden="true">★</span></p>
+              <p class="menu-best-value" id="menu-best-score">0</p>
+            </div>
+            <div class="menu-coins-badge">
+              <p class="menu-coins-label"><span aria-hidden="true">●</span> Coins <span aria-hidden="true">●</span></p>
+              <p class="menu-coins-value" id="menu-coins">0</p>
+            </div>
           </div>
 
+          <button class="menu-btn-start" id="start-btn" type="button">
+            <span class="menu-btn-icon menu-btn-icon-ball" aria-hidden="true">🏀</span>
+            <span class="menu-btn-label">Start game</span>
+            <span class="menu-btn-chevron" aria-hidden="true">»</span>
+          </button>
+
+          <button class="menu-btn-howto" id="howto-btn" type="button">
+            <span class="menu-btn-icon menu-btn-icon-howto" aria-hidden="true">📋</span>
+            <span class="menu-btn-label">How to play</span>
+            <span class="menu-btn-chevron menu-btn-chevron-single" aria-hidden="true">›</span>
+          </button>
         </div>
+
+        <nav class="menu-dock" aria-label="Menu shortcuts">
+          <button type="button" class="menu-dock-btn" id="dock-leaderboard">
+            <span class="menu-dock-icon" aria-hidden="true">🏆</span>
+            <span class="menu-dock-label">Leaderboard</span>
+          </button>
+          <button type="button" class="menu-dock-btn" id="dock-achievements">
+            <span class="menu-dock-icon" aria-hidden="true">🎖️</span>
+            <span class="menu-dock-label">Achievements</span>
+          </button>
+          <button type="button" class="menu-dock-btn" id="dock-settings">
+            <span class="menu-dock-icon" aria-hidden="true">⚙️</span>
+            <span class="menu-dock-label">Settings</span>
+          </button>
+          <button type="button" class="menu-dock-btn" id="dock-rate">
+            <span class="menu-dock-icon" aria-hidden="true">⭐</span>
+            <span class="menu-dock-label">Rate us</span>
+          </button>
+        </nav>
+
+        <p class="menu-toast hidden" id="menu-toast" role="status"></p>
 
       </div>
         <canvas id="menu-ball-canvas" class="hidden"></canvas>
@@ -77,9 +132,9 @@
 
             <li><span class="howto-num">4</span><span>Tap again mid-air to <strong>steer</strong> toward the next rim.</span></li>
 
-            <li><span class="howto-num">5</span><span>Leave the top or bottom of the screen and it's <strong>game over</strong>.</span></li>
+            <li><span class="howto-num">5</span><span>Collect <strong>coins</strong> in the air to grow your wallet.</span></li>
 
-            <li><span class="howto-num">6</span><span>Chain clean swishes for <strong>combo bonuses</strong> and a hot streak.</span></li>
+            <li><span class="howto-num">6</span><span>Leave the top or bottom of the screen and it's <strong>game over</strong>.</span></li>
 
           </ul>
 
@@ -100,4 +155,3 @@
   </body>
 
 </html>
-

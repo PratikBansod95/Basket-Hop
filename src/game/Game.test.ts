@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BALL_SPAWN_X,
   BALL_SPAWN_Y,
+  CLIMB_PER_BASKET,
   INITIAL_CLIMB_OFFSET,
   STAMINA_BASKET_RESTORE,
   STAMINA_DRAIN_PER_TAP,
@@ -9,6 +10,7 @@ import {
   STAMINA_UNLOCK_BASKETS,
 } from './constants';
 import { Game } from './Game';
+import { onBasket } from './hoop';
 import type { LaunchMechanic, TapContext } from './mechanics/LaunchMechanic';
 import { DefaultTapLaunch } from './mechanics/defaultTapLaunch';
 import { createTutorialState } from './tutorial';
@@ -52,6 +54,11 @@ function unlockStamina(game: Game): void {
   game.update(0);
 }
 
+function respawnCoinsForLevel(game: Game, level: number): void {
+  game.stats.level = level;
+  (game as unknown as { respawnCoinsForCurrentHoop: () => void }).respawnCoinsForCurrentHoop();
+}
+
 describe('Game start spawn', () => {
   it('starts the ball at the tuned opening spawn position', () => {
     const game = createGame();
@@ -72,6 +79,75 @@ describe('Game start spawn', () => {
     game.handleTap();
 
     expect(game.stats.totalShots).toBe(1);
+  });
+});
+
+describe('coin system', () => {
+  it('does not spawn coins on the opening level', () => {
+    const game = createGame();
+    game.reset();
+
+    expect(game.coins).toHaveLength(0);
+    expect(game.runCoins).toBe(0);
+  });
+
+  it('collects a coin and increments run coins', () => {
+    const game = createGame();
+    game.reset();
+    respawnCoinsForLevel(game, 1);
+    game.phase = GamePhase.Playing;
+    game.ball.hasLaunched = true;
+
+    game.coins[0].x = game.ball.x;
+    game.coins[0].y = game.ball.y;
+
+    game.update(0);
+
+    expect(game.coins[0].collected).toBe(true);
+    expect(game.runCoins).toBe(1);
+  });
+
+  it('does not collect the same coin twice', () => {
+    const game = createGame();
+    game.reset();
+    respawnCoinsForLevel(game, 1);
+    game.phase = GamePhase.Playing;
+    game.ball.hasLaunched = true;
+
+    game.coins[0].x = game.ball.x;
+    game.coins[0].y = game.ball.y;
+
+    game.update(0);
+    game.update(0);
+
+    expect(game.runCoins).toBe(1);
+  });
+
+  it('keeps early-level coins out of the immediate hoop area', () => {
+    const game = createGame();
+    game.reset();
+
+    respawnCoinsForLevel(game, 1);
+
+    const distances = game.coins.map((coin) => Math.abs(coin.x - game.hoop.x));
+    expect(Math.min(...distances)).toBeGreaterThan(160);
+  });
+
+  it('respawns a fresh coin set for the next level', () => {
+    const game = createGame();
+    game.reset();
+    respawnCoinsForLevel(game, 1);
+    const firstCoinIds = game.coins.map((coin) => coin.id);
+
+    game.stats.level = 2;
+    game.targetClimbOffset += CLIMB_PER_BASKET;
+    onBasket(game.hoop, game.targetClimbOffset);
+    (game as unknown as { respawnCoinsForCurrentHoop: () => void }).respawnCoinsForCurrentHoop();
+
+    expect(game.coins.length).toBeGreaterThanOrEqual(1);
+    expect(game.coins.length).toBeLessThanOrEqual(2);
+    expect(game.coins.map((coin) => coin.id)).not.toEqual(firstCoinIds);
+    expect(game.coins.every((coin) => !coin.collected)).toBe(true);
   });
 });
 

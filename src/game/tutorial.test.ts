@@ -73,6 +73,7 @@ describe('FTUE tutorial', () => {
   it('temporarily enables for all player save states', () => {
     expect(shouldRunTutorial({
       best: 0,
+      coins: 0,
       totalGames: 0,
       totalShots: 0,
       cleanShots: 0,
@@ -81,6 +82,7 @@ describe('FTUE tutorial', () => {
 
     expect(shouldRunTutorial({
       best: 0,
+      coins: 0,
       totalGames: 1,
       totalShots: 0,
       cleanShots: 0,
@@ -89,6 +91,7 @@ describe('FTUE tutorial', () => {
 
     expect(shouldRunTutorial({
       best: 3,
+      coins: 0,
       totalGames: 0,
       totalShots: 0,
       cleanShots: 0,
@@ -97,6 +100,7 @@ describe('FTUE tutorial', () => {
 
     expect(shouldRunTutorial({
       best: 0,
+      coins: 0,
       totalGames: 0,
       totalShots: 0,
       cleanShots: 0,

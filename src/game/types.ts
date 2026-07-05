@@ -54,6 +54,16 @@ export interface FloatingText {
   color: string;
 }
 
+export interface Coin {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  value: number;
+  collected: boolean;
+  phase: number;
+}
+
 export interface RunStats {
   score: number;
   combo: number;
@@ -86,6 +96,7 @@ export interface GameSnapshot {
   phase: GamePhase;
   ball: Ball;
   hoop: Hoop;
+  coins: Coin[];
   stats: RunStats;
   shake: number;
   floatingTexts: FloatingText[];

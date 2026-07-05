@@ -6,10 +6,9 @@ import { createTutorialState, shouldRunTutorial } from './game/tutorial';
 import { GamePhase } from './game/types';
 import { DefaultTapLaunch } from './game/mechanics/defaultTapLaunch';
 import { render, renderLoading } from './game/renderer';
-import { renderMenuBall, renderMenuScene } from './game/menuRenderer';
 import { preloadBackgroundAssets } from './game/assetLoader';
 import { createPlatform } from './platform/youtube';
-import type { SaveData } from './platform/types';
+import { mergeRunIntoSave, type SaveData } from './platform/types';
 import { GameOverModal } from './ui/gameOver';
 import { MainMenu } from './ui/mainMenu';
 import { Hud } from './ui/hud';
@@ -112,15 +111,13 @@ async function main(): Promise<void> {
     onScore: () => {},
     onGameOver: (stats) => {
       sfx.gameOver();
-      saveData.totalGames += 1;
-      saveData.totalShots += stats.totalShots;
-      saveData.cleanShots += stats.cleanShots;
-      if (stats.score > saveData.best) {
-        saveData.best = stats.score;
+      const previousBest = saveData.best;
+      saveData = mergeRunIntoSave(saveData, stats, game.runCoins);
+      if (stats.score > previousBest) {
         void platform.sendScore(stats.score);
       }
       void platform.saveSave(saveData);
-      gameOverModal.show(stats, saveData);
+      gameOverModal.show(stats, saveData, game.runCoins);
     },
   }, createTutorialState(tutorialEnabled));
 
@@ -151,9 +148,9 @@ async function main(): Promise<void> {
     game.returnToMenu();
     gameOverModal.hide();
     mainMenu.hideHowTo();
-    mainMenu.show(saveData.best);
+    mainMenu.show(saveData.best, saveData.coins);
     mainMenu.setMuted(isMuted());
-    setMenuBallVisible(true);
+    setMenuBallVisible(false);
   }
 
   canvas.addEventListener('pointerdown', (e) => {
@@ -164,11 +161,11 @@ async function main(): Promise<void> {
     game.handleTap();
   });
 
-  mainMenu.show(saveData.best);
+  mainMenu.show(saveData.best, saveData.coins);
   mainMenu.setMuted(isMuted());
-  setMenuBallVisible(true);
-  renderMenuScene(ctx, 0);
-  renderMenuBall(menuBallCtx, 0);
+  setMenuBallVisible(false);
+  ctx.fillStyle = '#0a0e14';
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   platform.firstFrameReady();
 
   await platform.getLanguage();
@@ -188,14 +185,14 @@ async function main(): Promise<void> {
     game.update(dt);
     const inGame = game.phase !== GamePhase.Menu;
     appRoot.classList.toggle('in-game', inGame);
-    hud.update(game.stats, game.phase, game.ball.hasLaunched, game.tutorialPrompt, game.stamina);
+    hud.update(game.stats, game.phase, game.ball.hasLaunched, game.tutorialPrompt, game.stamina, game.runCoins);
     if (game.phase === GamePhase.Menu) {
-      renderMenuScene(ctx, game.time);
-      renderMenuBall(menuBallCtx, game.time);
-      setMenuBallVisible(true);
+      ctx.fillStyle = '#0a0e14';
+      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      setMenuBallVisible(false);
     } else {
       setMenuBallVisible(false);
-      render(ctx, game.ball, game.hoop, game.floatingTexts, {
+      render(ctx, game.ball, game.hoop, game.coins, game.floatingTexts, {
         shake: game.shake,
         climbOffset: game.climbOffset,
         time: game.time,

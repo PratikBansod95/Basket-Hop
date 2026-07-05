@@ -62,6 +62,10 @@ export const STAMINA_BASKET_RESTORE = 48;
 
 export const STAMINA_BLOCKED_FEEDBACK_DURATION = 0.45;
 
+export const COIN_RADIUS = 18;
+
+export const COIN_VALUE = 1;
+
 export const HOOP_SCREEN_Y = 460;
 
 export const HOOP_CLEARANCE = 140;

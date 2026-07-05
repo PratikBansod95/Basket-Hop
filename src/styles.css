@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Permanent+Marker&display=swap');
+@import './styles/menu-screen.css';
 
 :root {
   /* Core palette — midnight court + ember accent */
@@ -382,6 +383,46 @@ body {
   font-size: 14px;
 }
 
+.coin-meter {
+  position: absolute;
+  top: clamp(18px, 2.5vh, 26px);
+  right: clamp(14px, 3vw, 22px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(12, 16, 24, 0.84), rgba(12, 16, 24, 0.72));
+  border: 1px solid rgba(255, 209, 102, 0.26);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.coin-meter-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff4bf 0%, #ffd166 48%, #f59e0b 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 0 12px rgba(255, 209, 102, 0.32);
+}
+
+.coin-meter-text,
+.coin-meter-value {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--cream-dim);
+}
+
+.coin-meter-value {
+  color: var(--cream);
+}
+
 .stamina-meter {
   position: absolute;
   top: clamp(18px, 2.5vh, 26px);
@@ -557,123 +598,6 @@ body {
   50% {
     opacity: 1;
     transform: translateX(-50%) translateY(-4px);
-  }
-}
-
-/* ─── Main menu ─── */
-
-#main-menu {
-  position: absolute;
-  inset: 0;
-  z-index: 6;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0 7% clamp(12px, 3%, 28px);
-  pointer-events: none;
-}
-
-#main-menu.hidden {
-  display: none;
-}
-
-.menu-mute-btn {
-  position: absolute;
-  top: clamp(12px, 2.5vh, 22px);
-  left: clamp(12px, 3vw, 22px);
-  z-index: 2;
-  width: clamp(42px, 9.5vw, 48px);
-  height: clamp(42px, 9.5vw, 48px);
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-md);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(14px);
-  color: var(--cream);
-  font-size: clamp(17px, 4vw, 20px);
-  cursor: pointer;
-  box-shadow: var(--shadow-md), var(--shadow-inset);
-  transition: background 0.2s, transform 0.15s;
-  pointer-events: auto;
-}
-
-.menu-mute-btn:active {
-  transform: scale(0.94);
-}
-
-.menu-card {
-  width: min(99%, 442px);
-  padding: clamp(22px, 5%, 30px) clamp(18px, 5.2%, 26px) clamp(18px, 4.5%, 24px);
-  text-align: center;
-  pointer-events: auto;
-  animation: panel-rise 0.55s var(--ease-out);
-}
-
-.menu-card.ui-panel::before {
-  height: 4px;
-}
-
-.menu-card .ui-kicker {
-  display: block;
-  margin: 0 0 clamp(10px, 2.8%, 14px);
-  font-size: clamp(11px, 2.8%, 13px);
-  letter-spacing: 0.08em;
-  line-height: 1.5;
-  color: var(--panel-muted);
-}
-
-.menu-card .ui-title {
-  margin: 0;
-  font-size: clamp(36px, 12.4%, 52px);
-  line-height: 1.08;
-  letter-spacing: 0.05em;
-}
-
-.menu-tagline {
-  margin: clamp(8px, 2.2%, 12px) 0 0;
-  font-size: clamp(14px, 3.8%, 17px);
-  font-weight: 500;
-  color: var(--panel-muted);
-  line-height: 1.45;
-}
-
-.menu-best {
-  margin: clamp(14px, 3.5%, 20px) auto clamp(4px, 1.2%, 8px);
-  padding: clamp(9px, 2.6%, 12px) clamp(16px, 4%, 22px);
-  border-radius: var(--radius-pill);
-  background: rgba(255, 107, 44, 0.1);
-  border: 1px solid rgba(201, 78, 24, 0.18);
-  font-family: var(--font-body);
-  font-size: clamp(16px, 4.6%, 20px);
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--accent-deep);
-  width: fit-content;
-  max-width: 100%;
-}
-
-.menu-actions {
-  margin-top: clamp(10px, 2.5%, 14px);
-  display: flex;
-  flex-direction: column;
-  gap: clamp(8px, 2%, 10px);
-}
-
-.menu-card .ui-btn {
-  margin-top: 0;
-  padding: clamp(14px, 3.6%, 18px) clamp(18px, 5.2%, 23px);
-  font-size: clamp(18px, 4.8%, 22px);
-}
-
-@keyframes panel-rise {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -901,30 +825,13 @@ body {
   display: none;
 }
 
+#app:not(.in-game) #publisher {
+  display: none;
+}
+
 @media (max-width: 480px) {
-  #main-menu {
-    padding: 0 8% clamp(10px, 2.5%, 20px);
-  }
-
-  .menu-card {
-    width: min(91%, 390px);
-    padding: 20px 16px 18px;
-  }
-
-  .menu-card .ui-kicker {
-    margin-bottom: 10px;
-    font-size: 11px;
-    letter-spacing: 0.22em;
-  }
-
-  .menu-card .ui-title {
-    font-size: clamp(30px, 10vw, 42px);
-    line-height: 1.1;
-  }
-
-  .menu-tagline {
-    margin-top: 8px;
-    font-size: 14px;
+  .menu-interactive {
+    width: min(92%, 360px);
   }
 
   .howto-modal {
@@ -959,65 +866,99 @@ body {
     padding: 8px 10px;
   }
 
+  .coin-meter {
+    top: clamp(14px, 2vh, 20px);
+    padding: 8px 12px;
+  }
+
   .hint-pill {
     bottom: clamp(96px, 10vh, 120px);
     padding: 8px 14px;
   }
 
-  .menu-card {
-    width: min(94%, 360px);
-    padding: 16px 14px 14px;
+  .menu-interactive {
+    bottom: clamp(64px, 10vh, 84px);
+    gap: 8px;
   }
 
-  .menu-card .ui-title {
-    font-size: clamp(28px, 8vw, 40px);
+  .menu-logo {
+    top: clamp(36px, 6vh, 52px);
   }
 
-  .menu-card .ui-btn {
-    padding: 11px 14px;
-    font-size: 16px;
+  .menu-logo-basket {
+    font-size: clamp(32px, 9vw, 44px);
+  }
+
+  .menu-logo-hop,
+  .menu-logo-hop-shadow {
+    font-size: clamp(44px, 12vw, 60px);
+  }
+
+  .menu-best-value,
+  .menu-coins-value {
+    font-size: clamp(26px, 7vw, 34px);
+  }
+
+  .menu-btn-start,
+  .menu-btn-howto {
+    padding: 12px 14px;
+    font-size: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-screen-bg,
+  .menu-logo-kicker-bit,
+  .menu-logo-kicker-dot,
+  .menu-logo-basket,
+  .menu-logo-hop,
+  .menu-logo-arc,
+  .menu-logo-orbit-ball,
+  .menu-logo-tagline span,
+  .menu-btn-start {
+    animation: none !important;
   }
 }
 
 /* Landscape phones and tablets — keep menu compact inside the stage */
 @media (orientation: landscape) and (max-height: 520px) {
-  #main-menu {
-    align-items: center;
-    padding: 0 5% clamp(6px, 2%, 12px);
-  }
-
-  .menu-card {
-    width: min(92%, 340px);
-    padding: 12px 14px;
-  }
-
-  .menu-card .ui-kicker {
-    margin-bottom: 6px;
-    font-size: 10px;
-  }
-
-  .menu-card .ui-title {
-    font-size: clamp(22px, 5.5vh, 34px);
-  }
-
-  .menu-tagline {
-    margin-top: 4px;
-    font-size: 12px;
-  }
-
-  .menu-best {
-    margin-top: 8px;
-    padding: 6px 12px;
-    font-size: 15px;
-  }
-
-  .menu-card .ui-btn {
-    padding: 9px 12px;
-    font-size: 14px;
-  }
-
-  .menu-actions {
+  .menu-interactive {
+    bottom: clamp(56px, 9vh, 72px);
+    width: min(70%, 320px);
     gap: 6px;
+  }
+
+  .menu-best-badge,
+  .menu-coins-badge {
+    padding: 6px 10px 8px;
+  }
+
+  .menu-best-value,
+  .menu-coins-value {
+    font-size: 24px;
+  }
+
+  .menu-btn-start,
+  .menu-btn-howto {
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+
+  .menu-dock-label {
+    font-size: 8px;
+  }
+
+  .menu-logo {
+    top: clamp(28px, 5vh, 40px);
+  }
+
+  .menu-logo-basket {
+    font-size: clamp(26px, 7vh, 36px);
+  }
+
+  .menu-logo-hop,
+  .menu-logo-hop-shadow {
+    font-size: clamp(36px, 10vh, 48px);
   }
 }
 

@@ -33,7 +33,7 @@ export class GameOverModal {
     this.root.classList.toggle('ads-mode', enabled);
   }
 
-  show(stats: RunStats, save: SaveData): void {
+  show(stats: RunStats, save: SaveData, runCoins: number): void {
     const cleanPct = getCleanPercent(stats);
     const best = Math.max(save.best, stats.score);
     const isNewBest = stats.score >= save.best && stats.score > 0;
@@ -51,6 +51,14 @@ export class GameOverModal {
           <div class="ui-stat-chip">
             <span class="label">Clean</span>
             <span class="value">${cleanPct}%</span>
+          </div>
+          <div class="ui-stat-chip">
+            <span class="label">Run coins</span>
+            <span class="value">${runCoins}</span>
+          </div>
+          <div class="ui-stat-chip">
+            <span class="label">Wallet</span>
+            <span class="value">${save.coins}</span>
           </div>
         </div>
         <div class="modal-actions">

@@ -1,21 +1,5 @@
 import { createLocalPlatform } from './local';
-import { DEFAULT_SAVE, type Platform, type SaveData } from './types';
-
-function parseSave(raw: string | null): SaveData {
-  if (!raw) return { ...DEFAULT_SAVE };
-  try {
-    const data = JSON.parse(raw) as Partial<SaveData>;
-    return {
-      best: data.best ?? 0,
-      totalGames: data.totalGames ?? 0,
-      totalShots: data.totalShots ?? 0,
-      cleanShots: data.cleanShots ?? 0,
-      tutorialSeen: data.tutorialSeen ?? false,
-    };
-  } catch {
-    return { ...DEFAULT_SAVE };
-  }
-}
+import { DEFAULT_SAVE, parseSaveData, type Platform } from './types';
 
 function isYouTubeEnv(): boolean {
   return typeof window.ytgame !== 'undefined' && !!window.ytgame?.IN_PLAYABLES_ENV;
@@ -34,7 +18,7 @@ export function createYouTubePlatform(): Platform {
     async loadSave() {
       try {
         const raw = await yt.game.loadData();
-        return parseSave(raw);
+        return parseSaveData(raw);
       } catch {
         return { ...DEFAULT_SAVE };
       }
