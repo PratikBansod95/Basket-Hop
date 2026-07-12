@@ -22,10 +22,14 @@ export function sampleBallTrail(x: number, y: number, radius: number, launched: 
     trail.length = 0;
     return;
   }
+  const max = trailCap();
+  if (max <= 0) {
+    trail.length = 0;
+    return;
+  }
   if (time - lastTrailSample < 0.026) return;
   lastTrailSample = time;
   trail.unshift({ x, y, r: radius });
-  const max = trailCap();
   if (trail.length > max) trail.length = max;
 }
 
@@ -101,7 +105,7 @@ function drawTrailGhost(
   ctx.translate(x, y);
   ctx.globalAlpha = Math.min(1, (0.1 + fade * 0.28) * style.alpha);
 
-  if (style.glow) {
+  if (style.glow && getRenderQuality() === 'high') {
     ctx.shadowColor = color;
     ctx.shadowBlur = 12 + fade * 10;
   }
@@ -210,7 +214,8 @@ export function drawBall(
     drawFallbackBall(ctx, radius);
   }
 
-  if (fx.kind !== 'none' && fxStrength > 0.05) {
+  // Overlay/orbit are expensive — high quality only.
+  if (fx.kind !== 'none' && fxStrength > 0.9) {
     drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'overlay', strength: fxStrength });
   }
 
@@ -232,7 +237,7 @@ export function drawBall(
 
   ctx.restore();
 
-  if (fx.kind !== 'none' && fxStrength > 0.05) {
+  if (fx.kind !== 'none' && fxStrength > 0.9) {
     drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'orbit', strength: fxStrength });
   }
 

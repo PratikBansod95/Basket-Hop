@@ -281,8 +281,7 @@ body {
   white-space: nowrap;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(8, 12, 22, 0.28);
-  backdrop-filter: blur(8px);
+  background: rgba(8, 12, 22, 0.72);
 }
 
 .hud-score-wrap {
@@ -294,9 +293,8 @@ body {
   min-height: clamp(44px, 10cqw, 54px);
   padding: 10px 32px 12px;
   border-radius: var(--radius-pill);
-  background: linear-gradient(180deg, rgba(22, 30, 48, 0.9) 0%, rgba(10, 14, 24, 0.94) 100%);
+  background: linear-gradient(180deg, rgba(22, 30, 48, 0.96) 0%, rgba(10, 14, 24, 0.98) 100%);
   border: 2px solid rgba(255, 193, 77, 0.38);
-  backdrop-filter: blur(16px) saturate(150%);
   box-shadow:
     0 10px 28px rgba(0, 0, 0, 0.38),
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
@@ -429,12 +427,11 @@ body {
   min-height: 42px;
   padding: 8px 14px 8px 10px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(12, 16, 24, 0.78), rgba(12, 16, 24, 0.66));
+  background: linear-gradient(180deg, rgba(12, 16, 24, 0.92), rgba(12, 16, 24, 0.88));
   border: 1px solid rgba(255, 209, 102, 0.28);
   box-shadow:
     0 10px 24px rgba(0, 0, 0, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
 }
 
 .coin-meter-icon {
@@ -461,12 +458,11 @@ body {
   width: min(34cqw, 180px);
   padding: 10px 12px;
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(12, 16, 24, 0.84), rgba(12, 16, 24, 0.72));
+  background: linear-gradient(180deg, rgba(12, 16, 24, 0.94), rgba(12, 16, 24, 0.9));
   border: 1px solid rgba(255, 193, 77, 0.2);
   box-shadow:
     0 10px 24px rgba(0, 0, 0, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
   opacity: 0;
   transform: translateY(-8px);
   transition:
@@ -581,9 +577,8 @@ body {
   padding: clamp(11px, 2.7cqw, 13px) clamp(16px, 4cqw, 20px);
   border-radius: var(--radius-pill);
   justify-content: center;
-  background: linear-gradient(180deg, rgba(12, 16, 24, 0.8), rgba(12, 16, 24, 0.68));
+  background: linear-gradient(180deg, rgba(12, 16, 24, 0.92), rgba(12, 16, 24, 0.86));
   border: 1px solid rgba(255, 193, 77, 0.18);
-  backdrop-filter: blur(12px);
   box-shadow:
     0 12px 28px rgba(0, 0, 0, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);

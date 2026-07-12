@@ -7,8 +7,17 @@ import { drawSkyScreen } from './skyRenderer';
 import { drawBall, drawBallShadow, drawBallTrail, sampleBallTrail } from './ballRenderer';
 import { drawCoin } from './coinRenderer';
 import { drawHoopNet, drawHoopRim, drawHoopShadow } from './hoopRenderer';
-import type { Ball, Coin, FloatingText, Hoop } from './types';
+import type { Coin, FloatingText, Hoop } from './types';
 import { drawParticles } from './particles';
+import { getRenderQuality } from './renderQuality';
+
+export interface RenderBall {
+  x: number;
+  y: number;
+  radius: number;
+  rotation: number;
+  hasLaunched: boolean;
+}
 
 export interface RenderState {
   shake: number;
@@ -46,7 +55,7 @@ function drawCoins(ctx: CanvasRenderingContext2D, coins: Coin[], time: number): 
 
 export function render(
   ctx: CanvasRenderingContext2D,
-  ball: Ball,
+  ball: RenderBall,
   hoop: Hoop,
   coins: Coin[],
   floatingTexts: FloatingText[],
@@ -54,11 +63,18 @@ export function render(
   colliders?: HoopColliders,
   skinId = 'classic',
 ): void {
-  const shakeX = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
-  const shakeY = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
+  const quality = getRenderQuality();
+  const shakeAmt = state.shake;
+  // Smooth-ish shake: time-based instead of Math.random() each paint (less micro-stutter).
+  const shakeX =
+    shakeAmt > 0 ? Math.sin(state.time * 57.3) * shakeAmt * 0.55 + Math.sin(state.time * 91.1) * shakeAmt * 0.35 : 0;
+  const shakeY =
+    shakeAmt > 0 ? Math.cos(state.time * 63.7) * shakeAmt * 0.55 + Math.cos(state.time * 84.2) * shakeAmt * 0.3 : 0;
 
   ctx.save();
-  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  // Opaque canvas — fill is cheaper than clear on many mobile GPUs.
+  ctx.fillStyle = '#0a0e14';
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   drawSkyScreen(ctx, state.climbOffset, state.time, state.level);
 
   ctx.translate(shakeX, shakeY);
@@ -68,7 +84,7 @@ export function render(
   drawHoopShadow(ctx, hoop, FLOOR_Y);
   drawCoins(ctx, coins, state.time);
   drawHoopNet(ctx, hoop);
-  drawParticles(ctx);
+  if (quality !== 'low') drawParticles(ctx);
   drawFloatingTexts(ctx, floatingTexts);
 
   const idleBob = ball.hasLaunched ? 0 : Math.sin(state.time * 2.8) * 5;
@@ -76,7 +92,9 @@ export function render(
 
   sampleBallTrail(ball.x, ballDrawY, ball.radius, ball.hasLaunched, state.time);
   drawBallTrail(ctx, skinId);
-  drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, FLOOR_Y);
+  if (quality !== 'low') {
+    drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, FLOOR_Y);
+  }
   drawBall(ctx, ball.x, ballDrawY, ball.radius, ball.rotation, skinId, state.time, ball.hasLaunched);
   drawHoopRim(ctx, hoop);
   if (colliders) drawDebugColliders(ctx, colliders);

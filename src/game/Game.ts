@@ -19,6 +19,7 @@ import { createColliders } from './collision';
 import { debugLog } from './debug';
 import { createHoop, onBasket, syncHoopToCamera, updateHoop } from './hoop';
 import { resetHoopNet, updateHoopNet } from './netPhysics';
+import { getRenderQuality } from './renderQuality';
 import type { LaunchMechanic } from './mechanics/LaunchMechanic';
 import { clampDt, integrateBall } from './physics';
 import { clearParticles, spawnBurst, spawnSwishFlash, updateParticles } from './particles';
@@ -123,6 +124,13 @@ export class Game {
   climbAnimating = false;
   time = 0;
 
+  /** Previous physics-step poses for display interpolation. */
+  prevBallX = 0;
+  prevBallY = 0;
+  prevBallRot = 0;
+  prevClimbOffset = INITIAL_CLIMB_OFFSET;
+  private shakeDuration = 0.18;
+
   private platformPaused = false;
   private firstTapDone = false;
   private bounceCooldown = 0;
@@ -177,6 +185,7 @@ export class Game {
     this.floatingTexts = [];
     this.shake = 0;
     this.shakeTimer = 0;
+    this.shakeDuration = 0.18;
     this.stamina = createStaminaState();
     this.firstTapDone = false;
     this.bounceCooldown = 0;
@@ -186,6 +195,40 @@ export class Game {
     resetBallTrail();
     this.launchMechanic.reset();
     this.resetTutorialRunState();
+    this.syncRenderPrev();
+  }
+
+  /** Call once before each fixed physics step. */
+  captureRenderPrev(): void {
+    this.prevBallX = this.ball.x;
+    this.prevBallY = this.ball.y;
+    this.prevBallRot = this.ball.rotation;
+    this.prevClimbOffset = this.climbOffset;
+  }
+
+  /** Keep prev == current (menu / after reset / pause). */
+  syncRenderPrev(): void {
+    this.captureRenderPrev();
+  }
+
+  getDisplayBall(alpha: number): { x: number; y: number; rotation: number } {
+    const t = Math.max(0, Math.min(1, alpha));
+    return {
+      x: this.prevBallX + (this.ball.x - this.prevBallX) * t,
+      y: this.prevBallY + (this.ball.y - this.prevBallY) * t,
+      rotation: this.prevBallRot + (this.ball.rotation - this.prevBallRot) * t,
+    };
+  }
+
+  getDisplayClimbOffset(alpha: number): number {
+    const t = Math.max(0, Math.min(1, alpha));
+    return this.prevClimbOffset + (this.climbOffset - this.prevClimbOffset) * t;
+  }
+
+  getDisplayShake(): number {
+    if (this.shakeTimer <= 0 || this.shakeDuration <= 0) return 0;
+    const fade = Math.max(0, Math.min(1, this.shakeTimer / this.shakeDuration));
+    return this.shake * fade * fade;
   }
 
   returnToMenu(): void {
@@ -462,7 +505,10 @@ export class Game {
         useFloor,
       );
       updateHoop(this.hoop, dt);
-      updateHoopNet(this.hoop, this.ball, dt);
+      // Cloth net is expensive — half-rate on low quality phones.
+      if (getRenderQuality() !== 'low' || ((this.time * 60) | 0) % 2 === 0) {
+        updateHoopNet(this.hoop, this.ball, dt);
+      }
       updateParticles(dt);
       this.tryClearFallThrough();
       this.collectCoins();
@@ -508,15 +554,19 @@ export class Game {
         this.pendingCoinRespawn = true;
         resetHoopNet(this.hoop);
 
+        const q = getRenderQuality();
+        const burstCount =
+          q === 'low' ? (scoreResult.isSwish ? 8 : 5) : scoreResult.isSwish ? 28 : 16;
         spawnBurst(
           this.ball.x,
           this.ball.y,
           scoreResult.isSwish ? '#ffffff' : '#f3c14d',
-          scoreResult.isSwish ? 28 : 16,
+          burstCount,
         );
-        if (scoreResult.isSwish) spawnSwishFlash(this.ball.x, this.ball.y);
+        if (scoreResult.isSwish && q !== 'low') spawnSwishFlash(this.ball.x, this.ball.y);
         this.shake = scoreResult.isSwish ? 16 : 9;
-        this.shakeTimer = scoreResult.isSwish ? 0.32 : 0.18;
+        this.shakeDuration = scoreResult.isSwish ? 0.32 : 0.18;
+        this.shakeTimer = this.shakeDuration;
         this.callbacks.onScore(scoreResult.points, scoreResult.isSwish);
         if (scoreResult.isSwish) this.callbacks.onSwoosh();
       }

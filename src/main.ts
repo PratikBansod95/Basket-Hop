@@ -19,7 +19,13 @@ import { Hud } from './ui/hud';
 import { renderMenuHomeFx } from './ui/menuHome3d';
 import { SkinsShop } from './ui/skinsShop';
 import { bindStageResize, computeStageLayout, layoutsEqual, applyResponsiveCssVars, syncSafeAreaCssVars, type StageLayout } from './ui/stageLayout';
-import { stepFixed } from './game/physics';
+import { FIXED_DT, stepFixed } from './game/physics';
+import {
+  getRenderQuality,
+  maxPhysicsStepsForQuality,
+  noteFrameTime,
+  shakeScaleForQuality,
+} from './game/renderQuality';
 
 const launchMechanic = new DefaultTapLaunch();
 
@@ -204,21 +210,41 @@ async function main(): Promise<void> {
   platform.gameReady();
 
   let lastTime = performance.now();
+  let inGameClass = false;
   function loop(now: number): void {
     requestAnimationFrame(loop);
     if (paused) {
       lastTime = now;
       physicsAcc = 0;
+      game.syncRenderPrev();
       return;
     }
-    const dt = (now - lastTime) / 1000;
+    const dtMs = now - lastTime;
+    const dt = dtMs / 1000;
     lastTime = now;
+    noteFrameTime(dtMs);
 
-    // Fixed 60 Hz sim — keeps ball motion consistent when display refresh dips on phones.
-    physicsAcc = stepFixed(physicsAcc, dt, (fixedDt) => game.update(fixedDt));
+    const quality = getRenderQuality();
+    physicsAcc = stepFixed(
+      physicsAcc,
+      dt,
+      (fixedDt) => {
+        game.captureRenderPrev();
+        game.update(fixedDt);
+      },
+      maxPhysicsStepsForQuality(quality),
+    );
+
+    const alpha = Math.max(0, Math.min(1, physicsAcc / FIXED_DT));
+    const displayBall = game.getDisplayBall(alpha);
+    const displayClimb = game.getDisplayClimbOffset(alpha);
+    const displayShake = game.getDisplayShake() * shakeScaleForQuality(quality);
 
     const inGame = game.phase !== GamePhase.Menu;
-    appRoot.classList.toggle('in-game', inGame);
+    if (inGame !== inGameClass) {
+      inGameClass = inGame;
+      appRoot.classList.toggle('in-game', inGame);
+    }
     hud.update(
       game.stats,
       game.phase,
@@ -237,13 +263,19 @@ async function main(): Promise<void> {
       setMenuFxVisible(false);
       render(
         ctx,
-        game.ball,
+        {
+          x: displayBall.x,
+          y: displayBall.y,
+          radius: game.ball.radius,
+          rotation: displayBall.rotation,
+          hasLaunched: game.ball.hasLaunched,
+        },
         game.hoop,
         game.coins,
         game.floatingTexts,
         {
-          shake: game.shake,
-          climbOffset: game.climbOffset,
+          shake: displayShake,
+          climbOffset: displayClimb,
           time: game.time,
           level: game.stats.level,
         },

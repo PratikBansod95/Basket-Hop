@@ -1,4 +1,5 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH, DEATH_MARGIN } from './constants';
+import { allowDangerZoneExtras, getRenderQuality } from './renderQuality';
 
 const DANGER_ZONE_HEIGHT = 72;
 
@@ -8,13 +9,16 @@ export function drawDangerZones(
   ballScreenY?: number,
   ballRadius = 0,
 ): void {
-  const pulse = 0.72 + Math.sin(time * 3.2) * 0.14;
+  const quality = getRenderQuality();
+  const pulse = quality === 'low' ? 0.75 : 0.72 + Math.sin(time * 3.2) * 0.14;
   let urgency = 1;
 
   if (ballScreenY !== undefined && ballRadius > 0) {
     const distTop = ballScreenY - ballRadius - DEATH_MARGIN;
     const distBottom = CANVAS_HEIGHT - DEATH_MARGIN - (ballScreenY + ballRadius);
     const nearest = Math.min(distTop, distBottom);
+    // Skip drawing when far from edges on low/medium — big win mid-flight.
+    if (quality !== 'high' && nearest > 140) return;
     if (nearest < 100) {
       urgency = 1 + (1 - Math.max(0, nearest) / 100) * 0.75;
     }
@@ -24,10 +28,14 @@ export function drawDangerZones(
 
   drawZoneBand(ctx, 'top', alpha);
   drawZoneBand(ctx, 'bottom', alpha);
-  drawZoneStripes(ctx, 'top', alpha * 0.55);
-  drawZoneStripes(ctx, 'bottom', alpha * 0.55);
-  drawBoundaryLines(ctx, alpha);
-  drawZoneLabels(ctx, alpha);
+  if (allowDangerZoneExtras(quality)) {
+    drawZoneStripes(ctx, 'top', alpha * 0.55);
+    drawZoneStripes(ctx, 'bottom', alpha * 0.55);
+    drawBoundaryLines(ctx, alpha, quality !== 'low');
+    if (quality === 'high') drawZoneLabels(ctx, alpha);
+  } else {
+    drawBoundaryLines(ctx, alpha, false);
+  }
 }
 
 function drawZoneBand(ctx: CanvasRenderingContext2D, edge: 'top' | 'bottom', alpha: number): void {
@@ -66,7 +74,7 @@ function drawZoneStripes(ctx: CanvasRenderingContext2D, edge: 'top' | 'bottom', 
 
   ctx.strokeStyle = `rgba(255, 220, 205, ${alpha})`;
   ctx.lineWidth = 2;
-  const step = 22;
+  const step = 28;
   for (let x = -h; x < CANVAS_WIDTH + h; x += step) {
     ctx.beginPath();
     ctx.moveTo(x, y0);
@@ -76,7 +84,7 @@ function drawZoneStripes(ctx: CanvasRenderingContext2D, edge: 'top' | 'bottom', 
   ctx.restore();
 }
 
-function drawBoundaryLines(ctx: CanvasRenderingContext2D, alpha: number): void {
+function drawBoundaryLines(ctx: CanvasRenderingContext2D, alpha: number, withBlur: boolean): void {
   const yTop = DEATH_MARGIN;
   const yBottom = CANVAS_HEIGHT - DEATH_MARGIN;
 
@@ -84,8 +92,10 @@ function drawBoundaryLines(ctx: CanvasRenderingContext2D, alpha: number): void {
   ctx.strokeStyle = `rgba(255, 95, 110, ${0.95 * alpha})`;
   ctx.lineWidth = 3;
   ctx.setLineDash([14, 9]);
-  ctx.shadowColor = 'rgba(255, 40, 60, 0.55)';
-  ctx.shadowBlur = 10;
+  if (withBlur) {
+    ctx.shadowColor = 'rgba(255, 40, 60, 0.55)';
+    ctx.shadowBlur = 10;
+  }
 
   ctx.beginPath();
   ctx.moveTo(0, yTop);

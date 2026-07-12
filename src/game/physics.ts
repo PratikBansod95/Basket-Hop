@@ -45,8 +45,8 @@ export function stepFixed(
     acc -= FIXED_DT;
     steps += 1;
   }
-  // Drop spiral-of-death remainder if we hit the step cap
-  if (steps >= maxSteps) acc = 0;
+  // Keep a fraction of remainder so render interpolation stays continuous under load.
+  if (steps >= maxSteps) acc = Math.min(acc, FIXED_DT * 0.99);
   return acc;
 }
 

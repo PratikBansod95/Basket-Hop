@@ -206,8 +206,8 @@ export function drawElementalBallFx(
   if (phase === 'overlay' || phase === 'all') {
     drawSkinOverlay(ctx, radius, profile.kind, time, strength);
   }
-  // Orbit particles are the heaviest layer — skip on low quality.
-  if ((phase === 'orbit' || phase === 'all') && qualityMul >= 0.55) {
+  // Orbit particles are the heaviest layer — high quality only.
+  if ((phase === 'orbit' || phase === 'all') && qualityMul >= 0.95) {
     drawSkinOrbit(ctx, radius, profile, time, strength);
   }
 }
