@@ -30,18 +30,21 @@ interface NetSim {
   nodes: SimNode[];
   constraints: SimConstraint[];
   key: string;
+  /** Hoop pose the cloth is currently anchored to (world space). */
+  anchorX: number;
+  anchorY: number;
 }
 
 let sim: NetSim | null = null;
 
 function simKey(hoop: Hoop): string {
-  // Only rebuild when side changes — climb/slide must translate pins, not reset cloth.
+  // Rebuild only when side flips — climb/slide translates the existing cloth.
   return hoop.side;
 }
 
 function constraintIters(): number {
   const q = getRenderQuality();
-  if (q === 'low') return 1;
+  if (q === 'low') return 2;
   if (q === 'medium') return 2;
   return 3;
 }
@@ -102,13 +105,34 @@ function buildSim(hoop: Hoop): NetSim {
     }
   }
 
-  return { nodes, constraints, key: simKey(hoop) };
+  return {
+    nodes,
+    constraints,
+    key: simKey(hoop),
+    anchorX: hoop.x,
+    anchorY: hoop.y,
+  };
 }
 
-function pinTop(sim: NetSim, hoop: Hoop): void {
+/** Move the whole cloth with the rim so free nodes don't stretch from an old world pose. */
+function translateSimToHoop(s: NetSim, hoop: Hoop): void {
+  const dx = hoop.x - s.anchorX;
+  const dy = hoop.y - s.anchorY;
+  if (dx === 0 && dy === 0) return;
+  for (const n of s.nodes) {
+    n.x += dx;
+    n.y += dy;
+    n.px += dx;
+    n.py += dy;
+  }
+  s.anchorX = hoop.x;
+  s.anchorY = hoop.y;
+}
+
+function pinTop(s: NetSim, hoop: Hoop): void {
   const layout = restLayout(hoop);
   for (let col = 0; col < COLS; col++) {
-    const n = sim.nodes[idx(0, col)];
+    const n = s.nodes[idx(0, col)];
     const p = layout.hangPts[col];
     n.x = p.x;
     n.y = p.y;
@@ -138,6 +162,7 @@ function ballInNetSpace(ball: Ball, hoop: Hoop): NetPoint {
 /** Visual-only — does not change ball velocity or colliders. */
 export function updateHoopNet(hoop: Hoop, ball: Ball, dt: number): void {
   const s = getSim(hoop);
+  translateSimToHoop(s, hoop);
   pinTop(s, hoop);
   const step = Math.min(dt, 0.033);
 
@@ -169,9 +194,9 @@ export function updateHoopNet(hoop: Hoop, ball: Ball, dt: number): void {
   for (let iter = 0; iter < constraintIters(); iter++) {
     for (const c of s.constraints) {
       const a = s.nodes[c.a];
-      const b = s.nodes[c.b];
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
+      const bn = s.nodes[c.b];
+      const dx = bn.x - a.x;
+      const dy = bn.y - a.y;
       const d = Math.hypot(dx, dy) || 0.001;
       const diff = ((c.rest - d) / d) * STIFF;
       const ox = dx * diff * 0.5;
@@ -180,9 +205,9 @@ export function updateHoopNet(hoop: Hoop, ball: Ball, dt: number): void {
         a.x -= ox;
         a.y -= oy;
       }
-      if (!b.pinned) {
-        b.x += ox;
-        b.y += oy;
+      if (!bn.pinned) {
+        bn.x += ox;
+        bn.y += oy;
       }
     }
     pinTop(s, hoop);
@@ -192,13 +217,18 @@ export function updateHoopNet(hoop: Hoop, ball: Ball, dt: number): void {
 export function getSimulatedLayout(hoop: Hoop): NetLayout {
   const base = restLayout(hoop);
   const s = getSim(hoop);
+  // Draw may use an interpolated hoop — offset from the physics anchor without mutating sim.
+  const ox = hoop.x - s.anchorX;
+  const oy = hoop.y - s.anchorY;
   const hangPts: NetPoint[] = [];
   const bottomPts: NetPoint[] = [];
   const ringYs = [...base.ringYs];
 
   for (let col = 0; col < COLS; col++) {
-    hangPts.push({ x: s.nodes[idx(0, col)].x, y: s.nodes[idx(0, col)].y });
-    bottomPts.push({ x: s.nodes[idx(ROWS - 1, col)].x, y: s.nodes[idx(ROWS - 1, col)].y });
+    const top = s.nodes[idx(0, col)];
+    const bot = s.nodes[idx(ROWS - 1, col)];
+    hangPts.push({ x: top.x + ox, y: top.y + oy });
+    bottomPts.push({ x: bot.x + ox, y: bot.y + oy });
   }
 
   return { ...base, hangPts, bottomPts, ringYs };
@@ -206,12 +236,14 @@ export function getSimulatedLayout(hoop: Hoop): NetLayout {
 
 export function getSimRingPoints(hoop: Hoop): NetPoint[][] {
   const s = getSim(hoop);
+  const ox = hoop.x - s.anchorX;
+  const oy = hoop.y - s.anchorY;
   const rings: NetPoint[][] = [];
   for (let row = 1; row < ROWS - 1; row++) {
     const rowPts: NetPoint[] = [];
     for (let col = 0; col < COLS; col++) {
       const n = s.nodes[idx(row, col)];
-      rowPts.push({ x: n.x, y: n.y });
+      rowPts.push({ x: n.x + ox, y: n.y + oy });
     }
     rings.push(rowPts);
   }
