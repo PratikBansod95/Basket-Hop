@@ -62,15 +62,53 @@ export function render(
   colliders?: HoopColliders,
   skinId = 'classic',
 ): void {
+  renderWorldScene(ctx, hoop, coins, floatingTexts, state, colliders, true);
+  drawBalls(ctx, [ball], state.time, skinId, FLOOR_Y);
+  drawHoopRim(ctx, hoop);
+  if (colliders) drawDebugColliders(ctx, colliders);
+  ctx.restore();
+
+  if (ball.hasLaunched) {
+    const ballScreenY = screenY(ball.y, state.climbOffset);
+    drawDangerZones(ctx, state.time, ballScreenY, ball.radius);
+  }
+}
+
+/** Versus: two balls, no coins, no danger zones. */
+export function renderVersus(
+  ctx: CanvasRenderingContext2D,
+  balls: RenderBall[],
+  hoop: Hoop,
+  floatingTexts: FloatingText[],
+  state: RenderState,
+  colliders?: HoopColliders,
+  skinIds: [string, string] = ['classic', 'classic'],
+): void {
+  renderWorldScene(ctx, hoop, [], floatingTexts, state, colliders, false);
+  for (let i = 0; i < balls.length; i += 1) {
+    drawBalls(ctx, [balls[i]], state.time, skinIds[i] ?? skinIds[0], FLOOR_Y);
+  }
+  drawHoopRim(ctx, hoop);
+  if (colliders) drawDebugColliders(ctx, colliders);
+  ctx.restore();
+}
+
+function renderWorldScene(
+  ctx: CanvasRenderingContext2D,
+  hoop: Hoop,
+  coins: Coin[],
+  floatingTexts: FloatingText[],
+  state: RenderState,
+  _colliders: HoopColliders | undefined,
+  _drawDangerPlaceholder: boolean,
+): void {
   const shakeAmt = state.shake;
-  // Smooth-ish shake: time-based instead of Math.random() each paint (less micro-stutter).
   const shakeX =
     shakeAmt > 0 ? Math.sin(state.time * 57.3) * shakeAmt * 0.55 + Math.sin(state.time * 91.1) * shakeAmt * 0.35 : 0;
   const shakeY =
     shakeAmt > 0 ? Math.cos(state.time * 63.7) * shakeAmt * 0.55 + Math.cos(state.time * 84.2) * shakeAmt * 0.3 : 0;
 
   ctx.save();
-  // Opaque canvas — fill is cheaper than clear on many mobile GPUs.
   ctx.fillStyle = '#0a0e14';
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   drawSkyScreen(ctx, state.climbOffset, state.time, state.level);
@@ -84,20 +122,20 @@ export function render(
   drawHoopNet(ctx, hoop);
   drawParticles(ctx);
   drawFloatingTexts(ctx, floatingTexts);
+}
 
-  const idleBob = ball.hasLaunched ? 0 : Math.sin(state.time * 2.8) * 5;
-  const ballDrawY = ball.y + idleBob;
-
-  drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, FLOOR_Y);
-  drawBall(ctx, ball.x, ballDrawY, ball.radius, ball.rotation, skinId, state.time, ball.hasLaunched);
-  drawHoopRim(ctx, hoop);
-  if (colliders) drawDebugColliders(ctx, colliders);
-
-  ctx.restore();
-
-  if (ball.hasLaunched) {
-    const ballScreenY = screenY(ball.y, state.climbOffset);
-    drawDangerZones(ctx, state.time, ballScreenY, ball.radius);
+function drawBalls(
+  ctx: CanvasRenderingContext2D,
+  balls: RenderBall[],
+  time: number,
+  skinId: string,
+  floorY: number,
+): void {
+  for (const ball of balls) {
+    const idleBob = ball.hasLaunched ? 0 : Math.sin(time * 2.8) * 5;
+    const ballDrawY = ball.y + idleBob;
+    drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, floorY);
+    drawBall(ctx, ball.x, ballDrawY, ball.radius, ball.rotation, skinId, time, ball.hasLaunched);
   }
 }
 

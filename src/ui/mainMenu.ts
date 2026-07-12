@@ -22,6 +22,7 @@ export class MainMenu {
   private statsGamesEl: HTMLElement;
   private statsCleanEl: HTMLElement;
   private onStart: () => void;
+  private onVersus: (() => void) | null = null;
   private onMuteToggle: (() => void) | null = null;
   private onOpenSkinsShop: (() => void) | null = null;
   private onOpenLeaderboard: (() => void) | null = null;
@@ -32,11 +33,13 @@ export class MainMenu {
     onMuteToggle?: () => void,
     onOpenSkinsShop?: () => void,
     onOpenLeaderboard?: () => void,
+    onVersus?: () => void,
   ) {
     this.onStart = onStart;
     this.onMuteToggle = onMuteToggle ?? null;
     this.onOpenSkinsShop = onOpenSkinsShop ?? null;
     this.onOpenLeaderboard = onOpenLeaderboard ?? null;
+    this.onVersus = onVersus ?? null;
     this.root = document.getElementById('main-menu')!;
     this.howToRoot = document.getElementById('how-to-play')!;
     this.statsRoot = document.getElementById('menu-stats')!;
@@ -56,6 +59,11 @@ export class MainMenu {
     this.root.querySelector('#start-btn')!.addEventListener('click', () => {
       this.closeAllModals();
       this.onStart();
+    });
+
+    this.root.querySelector('#versus-btn')!.addEventListener('click', () => {
+      this.closeAllModals();
+      this.onVersus?.();
     });
 
     this.howToRoot.querySelector('#howto-close-btn')!.addEventListener('click', () => {

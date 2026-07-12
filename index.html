@@ -32,6 +32,7 @@
         <canvas id="game-canvas"></canvas>
         <div id="game-overlay">
           <div id="hud"></div>
+          <div id="versus-hud" class="hidden"></div>
         </div>
         <div id="main-menu">
 
@@ -117,6 +118,11 @@
                 <path d="M10 7l5 5-5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </span>
+          </button>
+
+          <button class="menu-versus-cta" id="versus-btn" type="button">
+            <span class="menu-versus-label">Versus (local)</span>
+            <span class="menu-versus-sub">2 balls · 120s</span>
           </button>
         </div>
 
@@ -326,6 +332,18 @@
       </div>
 
       <div id="game-over" class="hidden"></div>
+
+      <div id="versus-result" class="menu-overlay hidden" aria-modal="true" role="dialog">
+        <div class="menu-modal ui-panel versus-result-card">
+          <h2 class="menu-modal-title" id="versus-result-title">P1 wins!</h2>
+          <p class="versus-result-score" id="versus-result-score">0 – 0</p>
+          <p class="versus-result-note">Local versus — online matchmaking comes next.</p>
+          <div class="versus-result-actions">
+            <button class="ui-btn ui-btn-primary" id="versus-rematch-btn" type="button">Rematch</button>
+            <button class="ui-btn" id="versus-menu-btn" type="button">Menu</button>
+          </div>
+        </div>
+      </div>
 
       </div>
 

@@ -1,11 +1,12 @@
 import { SfxEngine } from './audio/sfx';
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from './game/constants';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, altitudeTier } from './game/constants';
 import { DEBUG } from './game/debug';
 import { Game } from './game/Game';
+import { VersusGame, type VersusPlayerId } from './game/VersusGame';
 import { createStaminaIntroState, createTutorialState, shouldRunStaminaTutorial, shouldRunTutorial } from './game/tutorial';
 import { GamePhase } from './game/types';
 import { DefaultTapLaunch } from './game/mechanics/defaultTapLaunch';
-import { render, renderLoading } from './game/renderer';
+import { render, renderLoading, renderVersus } from './game/renderer';
 import { preloadBackgroundAssets } from './game/assetLoader';
 import { preloadCoinAsset } from './game/coinRenderer';
 import { preloadZoneAssets } from './game/zoneAssets';
@@ -16,6 +17,8 @@ import { preloadSkinAssets } from './shop/skinAssets';
 import { GameOverModal } from './ui/gameOver';
 import { MainMenu } from './ui/mainMenu';
 import { Hud } from './ui/hud';
+import { VersusHud } from './ui/versusHud';
+import { VersusResultModal } from './ui/versusResult';
 import { renderMenuHomeFx } from './ui/menuHome3d';
 import { SkinsShop } from './ui/skinsShop';
 import { NicknameGate } from './ui/nicknameGate';
@@ -32,6 +35,9 @@ import {
 import { newClientRunId, submitSoloRunScore } from './services/api/submitRun';
 
 const launchMechanic = new DefaultTapLaunch();
+const versusLaunchMechanic = new DefaultTapLaunch();
+
+type ActiveMode = 'menu' | 'solo' | 'versus';
 
 async function main(): Promise<void> {
   const platform = createPlatform();
@@ -45,6 +51,7 @@ async function main(): Promise<void> {
   let lastLayout: StageLayout | null = null;
   let physicsAcc = 0;
   let currentRunId = newClientRunId();
+  let activeMode: ActiveMode = 'menu';
 
   let saveData: SaveData = normalizeSkinSave(await platform.loadSave());
   // Persist migrated identity fields (playerId) for older local saves.
@@ -60,6 +67,7 @@ async function main(): Promise<void> {
 
   const sfx = new SfxEngine();
   const hud = new Hud();
+  const versusHud = new VersusHud();
   const skinsShop = new SkinsShop();
 
   function isMuted(): boolean {
@@ -98,6 +106,11 @@ async function main(): Promise<void> {
   );
   gameOverModal.setAdsMode(platform.isAdsMode());
 
+  const versusResultModal = new VersusResultModal(
+    () => requireNicknameThen(() => startVersusRun()),
+    () => goToMainMenu(),
+  );
+
   const mainMenu = new MainMenu(
     () => {
       sfx.unlock();
@@ -117,6 +130,10 @@ async function main(): Promise<void> {
     () => {
       void leaderboard.show();
     },
+    () => {
+      sfx.unlock();
+      requireNicknameThen(() => startVersusRun());
+    },
   );
 
   syncAudio();
@@ -130,7 +147,6 @@ async function main(): Promise<void> {
 
   function resize(): void {
     syncSafeAreaCssVars();
-    // Measure #app content box (safe-area padding already applied) so we don't double-inset.
     const layout = computeStageLayout(appRoot.clientWidth, appRoot.clientHeight);
     applyResponsiveCssVars(canvasStage, layout, appRoot);
 
@@ -156,7 +172,6 @@ async function main(): Promise<void> {
 
   bindStageResize(resize);
   onRenderQualityChange(() => {
-    // Force DPR retarget when quality adapts mid-run.
     lastLayout = null;
     resize();
   });
@@ -197,25 +212,46 @@ async function main(): Promise<void> {
     },
   }, createTutorialState(tutorialEnabled), createStaminaIntroState(staminaTutorialEnabled));
 
+  const versusGame = new VersusGame(versusLaunchMechanic, {
+    onTap: () => {
+      sfx.unlock();
+      sfx.tap();
+    },
+    onBounce: () => sfx.bounce(),
+    onSwoosh: () => sfx.swoosh(),
+    onScore: () => {},
+    onMatchEnd: (result) => {
+      sfx.gameOver();
+      versusResultModal.show(result);
+    },
+  });
+
   if (DEBUG) {
-    (window as unknown as { __game: Game }).__game = game;
-    console.log('[debug] enabled — logs + collider overlay. Inspect: window.__game');
+    (window as unknown as { __game: Game; __versus: VersusGame }).__game = game;
+    (window as unknown as { __versus: VersusGame }).__versus = versusGame;
+    console.log('[debug] enabled — logs + collider overlay. Inspect: window.__game / __versus');
   }
 
   platform.onPause(() => {
     paused = true;
     game.paused = true;
+    versusGame.paused = true;
     void platform.saveSave(saveData);
   });
   platform.onResume(() => {
     paused = false;
     game.paused = false;
+    versusGame.paused = false;
   });
 
   function startRun(): void {
+    activeMode = 'solo';
     skinsShop.hide();
     leaderboard.hide();
     nicknameGate.hide();
+    versusResultModal.hide();
+    versusHud.hide();
+    versusGame.returnToMenu();
     currentRunId = newClientRunId();
     game.reset();
     gameOverModal.hide();
@@ -223,9 +259,27 @@ async function main(): Promise<void> {
     setMenuFxVisible(false);
   }
 
-  function goToMainMenu(): void {
-    game.returnToMenu();
+  function startVersusRun(): void {
+    activeMode = 'versus';
+    skinsShop.hide();
+    leaderboard.hide();
+    nicknameGate.hide();
     gameOverModal.hide();
+    game.returnToMenu();
+    versusResultModal.hide();
+    versusGame.reset();
+    versusHud.show();
+    mainMenu.hide();
+    setMenuFxVisible(false);
+  }
+
+  function goToMainMenu(): void {
+    activeMode = 'menu';
+    game.returnToMenu();
+    versusGame.returnToMenu();
+    gameOverModal.hide();
+    versusResultModal.hide();
+    versusHud.hide();
     mainMenu.show(saveData);
     mainMenu.setMuted(isMuted());
     setMenuFxVisible(true);
@@ -236,11 +290,36 @@ async function main(): Promise<void> {
 
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (game.phase === GamePhase.GameOver || game.phase === GamePhase.Menu) return;
     if (mainMenu.isVisible()) return;
     if (nicknameGate.isOpen() || leaderboard.isOpen()) return;
+
+    if (activeMode === 'versus') {
+      if (versusGame.phase === GamePhase.GameOver || versusGame.phase === GamePhase.Menu) return;
+      const rect = canvas.getBoundingClientRect();
+      const xNorm = (e.clientX - rect.left) / Math.max(1, rect.width);
+      const player: VersusPlayerId = xNorm < 0.5 ? 0 : 1;
+      sfx.unlock();
+      versusGame.handleTap(player);
+      return;
+    }
+
+    if (game.phase === GamePhase.GameOver || game.phase === GamePhase.Menu) return;
     sfx.unlock();
     game.handleTap();
+  });
+
+  // Keyboard helpers for local versus on desktop (A/W = P1, arrows = P2).
+  window.addEventListener('keydown', (e) => {
+    if (activeMode !== 'versus') return;
+    if (versusGame.phase === GamePhase.GameOver || versusGame.phase === GamePhase.Menu) return;
+    const key = e.key.toLowerCase();
+    if (key === 'a' || key === 'w') {
+      e.preventDefault();
+      versusGame.handleTap(0);
+    } else if (key === 'arrowleft' || key === 'arrowup') {
+      e.preventDefault();
+      versusGame.handleTap(1);
+    }
   });
 
   mainMenu.show(saveData);
@@ -266,7 +345,8 @@ async function main(): Promise<void> {
     if (paused) {
       lastTime = now;
       physicsAcc = 0;
-      game.syncRenderPrev();
+      if (activeMode === 'versus') versusGame.syncRenderPrev();
+      else game.syncRenderPrev();
       return;
     }
     const dtMs = now - lastTime;
@@ -275,8 +355,83 @@ async function main(): Promise<void> {
     noteFrameTime(dtMs);
 
     const quality = getRenderQuality();
-    // Capture once per display frame — capturing inside each physics step
-    // made multi-step catch-up frames teleport the ball.
+
+    if (activeMode === 'versus') {
+      versusGame.captureRenderPrev();
+      physicsAcc = stepFixed(
+        physicsAcc,
+        dt,
+        (fixedDt) => versusGame.update(fixedDt),
+        maxPhysicsStepsForQuality(quality),
+      );
+      const alpha = Math.max(0, Math.min(1, physicsAcc / FIXED_DT));
+      const b0 = versusGame.getDisplayBall(0, alpha);
+      const b1 = versusGame.getDisplayBall(1, alpha);
+      const displayClimb = versusGame.getDisplayClimbOffset(alpha);
+      const displayHoop = versusGame.getDisplayHoop(alpha);
+      const displayShake = versusGame.getDisplayShake() * shakeScaleForQuality(quality);
+      const climbLevel = altitudeTier(versusGame.climbOffset);
+
+      const inGame = versusGame.phase !== GamePhase.Menu;
+      if (inGame !== inGameClass) {
+        inGameClass = inGame;
+        appRoot.classList.toggle('in-game', inGame);
+      }
+
+      // Hide solo HUD while versus is active.
+      hud.update(game.stats, 'menu', false);
+      versusHud.update(
+        versusGame.scoreP1,
+        versusGame.scoreP2,
+        versusGame.timeLeft,
+        versusGame.phase,
+        versusGame.balls[0].hasLaunched || versusGame.balls[1].hasLaunched,
+      );
+
+      if (versusGame.phase === GamePhase.Menu) {
+        ctx.fillStyle = '#0a0e14';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        renderMenuHomeFx(menuFxCtx, versusGame.time, saveData.equippedSkin);
+        setMenuFxVisible(true);
+      } else {
+        setMenuFxVisible(false);
+        const displayTime = versusGame.time + physicsAcc;
+        renderVersus(
+          ctx,
+          [
+            {
+              x: b0.x,
+              y: b0.y,
+              radius: versusGame.balls[0].radius,
+              rotation: b0.rotation,
+              hasLaunched: versusGame.balls[0].hasLaunched,
+            },
+            {
+              x: b1.x,
+              y: b1.y,
+              radius: versusGame.balls[1].radius,
+              rotation: b1.rotation,
+              hasLaunched: versusGame.balls[1].hasLaunched,
+            },
+          ],
+          displayHoop,
+          versusGame.floatingTexts,
+          {
+            shake: displayShake,
+            climbOffset: displayClimb,
+            time: displayTime,
+            level: climbLevel,
+          },
+          DEBUG ? versusGame.colliders : undefined,
+          [saveData.equippedSkin, saveData.equippedSkin],
+        );
+      }
+      return;
+    }
+
+    // Solo path — keep versus HUD tucked away.
+    versusHud.hide();
+
     game.captureRenderPrev();
     physicsAcc = stepFixed(
       physicsAcc,
@@ -312,7 +467,6 @@ async function main(): Promise<void> {
       setMenuFxVisible(true);
     } else {
       setMenuFxVisible(false);
-      // Continuous display time for idle bob / FX (avoids step-quantized motion).
       const displayTime = game.time + physicsAcc;
       render(
         ctx,

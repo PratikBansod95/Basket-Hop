@@ -112,6 +112,11 @@ export const COURT_CENTER_Y = Math.round((OPEN_COURT_TOP + WORLD.courtFloorY) / 
 
 export const BALL_SPAWN_X = 305;
 
+/** Versus local spawn X (left / right of mid-court). */
+export const VERSUS_P1_SPAWN_X = 220;
+export const VERSUS_P2_SPAWN_X = 500;
+export const VERSUS_DURATION_SEC = 120;
+
 export const FLOOR_Y = WORLD.courtFloorY;
 
 
