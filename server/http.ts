@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type { ApiErrorResponse } from "../shared/contracts/leaderboard";
-import { isOriginAllowed } from "./cors";
+import { isOriginAllowed } from "./cors.js";
 
-export { isOriginAllowed } from "./cors";
+export { isOriginAllowed } from "./cors.js";
 
 export function json<T>(
   res: VercelResponse,
