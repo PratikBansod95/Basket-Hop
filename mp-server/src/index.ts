@@ -30,11 +30,12 @@ async function handleMessage(ws: WebSocket, raw: string): Promise<void> {
   }
 
   if (message.type === 'hello') {
-    if (message.protocol !== MP_PROTOCOL_VERSION) {
+    const protocol = Number(message.protocol);
+    if (!Number.isFinite(protocol) || protocol !== MP_PROTOCOL_VERSION) {
       matchMaker.send(ws, {
         type: 'error',
         code: 'protocol',
-        message: `Unsupported protocol version. Expected ${MP_PROTOCOL_VERSION}.`,
+        message: `App update required (got protocol ${String(message.protocol)}, need ${MP_PROTOCOL_VERSION}). Hard-refresh the page and try again.`,
       });
       return;
     }

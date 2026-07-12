@@ -64,7 +64,11 @@ export class MpClient {
     }
 
     this.ws.addEventListener('open', () => {
-      this.send({ type: 'hello', protocol: MP_PROTOCOL_VERSION, playerId: this.playerId });
+      this.send({
+        type: 'hello',
+        protocol: Number(MP_PROTOCOL_VERSION),
+        playerId: this.playerId,
+      });
       this.startHeartbeat();
       this.handlers.onOpen?.();
     });
