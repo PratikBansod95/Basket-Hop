@@ -18,18 +18,22 @@ import { MainMenu } from './ui/mainMenu';
 import { Hud } from './ui/hud';
 import { renderMenuHomeFx } from './ui/menuHome3d';
 import { SkinsShop } from './ui/skinsShop';
-import { bindStageResize, computeStageLayout, getViewportSize } from './ui/stageLayout';
+import { bindStageResize, computeStageLayout, layoutsEqual, applyResponsiveCssVars, syncSafeAreaCssVars, type StageLayout } from './ui/stageLayout';
+import { stepFixed } from './game/physics';
 
 const launchMechanic = new DefaultTapLaunch();
 
 async function main(): Promise<void> {
   const platform = createPlatform();
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d')!;
+  const ctx =
+    canvas.getContext('2d', { alpha: false, desynchronized: true }) ?? canvas.getContext('2d')!;
   const menuFxCanvas = document.getElementById('menu-fx-canvas') as HTMLCanvasElement;
   const menuFxCtx = menuFxCanvas.getContext('2d')!;
   const canvasStage = document.querySelector('.canvas-stage') as HTMLElement;
   const appRoot = document.getElementById('app')!;
+  let lastLayout: StageLayout | null = null;
+  let physicsAcc = 0;
 
   let saveData: SaveData = normalizeSkinSave(await platform.loadSave());
   let userMuted = false;
@@ -91,15 +95,20 @@ async function main(): Promise<void> {
   let paused = false;
 
   function resize(): void {
-    const { width: vw, height: vh } = getViewportSize();
-    const layout = computeStageLayout(vw, vh);
+    syncSafeAreaCssVars();
+    // Measure #app content box (safe-area padding already applied) so we don't double-inset.
+    const layout = computeStageLayout(appRoot.clientWidth, appRoot.clientHeight);
+    applyResponsiveCssVars(canvasStage, layout, appRoot);
+
+    if (layoutsEqual(lastLayout, layout)) return;
+    lastLayout = layout;
 
     canvasStage.style.width = `${layout.width}px`;
     canvasStage.style.height = `${layout.height}px`;
 
     for (const c of [canvas, menuFxCanvas]) {
-      c.width = CANVAS_WIDTH * layout.dpr;
-      c.height = CANVAS_HEIGHT * layout.dpr;
+      c.width = Math.round(CANVAS_WIDTH * layout.dpr);
+      c.height = Math.round(CANVAS_HEIGHT * layout.dpr);
       c.style.width = '100%';
       c.style.height = '100%';
     }
@@ -199,12 +208,15 @@ async function main(): Promise<void> {
     requestAnimationFrame(loop);
     if (paused) {
       lastTime = now;
+      physicsAcc = 0;
       return;
     }
     const dt = (now - lastTime) / 1000;
     lastTime = now;
 
-    game.update(dt);
+    // Fixed 60 Hz sim — keeps ball motion consistent when display refresh dips on phones.
+    physicsAcc = stepFixed(physicsAcc, dt, (fixedDt) => game.update(fixedDt));
+
     const inGame = game.phase !== GamePhase.Menu;
     appRoot.classList.toggle('in-game', inGame);
     hud.update(

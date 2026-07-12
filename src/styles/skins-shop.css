@@ -5,7 +5,7 @@
   display: flex;
   align-items: stretch;
   justify-content: center;
-  padding: clamp(10px, 2vh, 16px);
+  padding: clamp(10px, 2cqh, 16px);
   background:
     radial-gradient(ellipse 80% 50% at 50% 0%, rgba(50, 80, 140, 0.35), transparent 55%),
     rgba(8, 12, 22, 0.92);
@@ -18,7 +18,7 @@
 
 .skins-shop-panel {
   position: relative;
-  width: min(100%, 420px);
+  width: min(100%, 546px);
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -50,7 +50,7 @@
 .skins-shop-title {
   margin: 2px 0 0;
   font-family: var(--font-display);
-  font-size: clamp(22px, 6vw, 28px);
+  font-size: clamp(22px, 6cqw, 28px);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #f8fbff;
@@ -90,8 +90,10 @@
 }
 
 .skins-shop-close {
-  width: 36px;
-  height: 36px;
+  width: max(44px, 36px);
+  height: max(44px, 36px);
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
   border: none;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
@@ -110,7 +112,8 @@
 .skins-filter {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 8px 12px;
+  min-height: var(--touch-min);
   background: rgba(255, 255, 255, 0.04);
   color: rgba(248, 251, 255, 0.78);
   font-family: var(--font-body);
@@ -188,8 +191,8 @@
 }
 
 .skins-card-preview {
-  width: 88px;
-  height: 88px;
+  width: clamp(88px, 16cqw, 114px);
+  height: clamp(88px, 16cqw, 114px);
   border-radius: 50%;
   overflow: hidden;
   margin-top: 4px;

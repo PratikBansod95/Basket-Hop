@@ -187,11 +187,17 @@ export function drawElementalBallFx(
   radius: number,
   skinId: string,
   time: number,
-  options?: { launched?: boolean; phase?: 'aura' | 'overlay' | 'orbit' | 'all' },
+  options?: {
+    launched?: boolean;
+    phase?: 'aura' | 'overlay' | 'orbit' | 'all';
+    strength?: number;
+  },
 ): void {
   const profile = getSkinFx(skinId);
   if (profile.kind === 'none') return;
-  const strength = options?.launched ? 1.2 : 0.95;
+  const qualityMul = options?.strength ?? 1;
+  if (qualityMul <= 0.05) return;
+  const strength = (options?.launched ? 1.2 : 0.95) * qualityMul;
   const phase = options?.phase ?? 'all';
 
   if (phase === 'aura' || phase === 'all') {
@@ -200,7 +206,8 @@ export function drawElementalBallFx(
   if (phase === 'overlay' || phase === 'all') {
     drawSkinOverlay(ctx, radius, profile.kind, time, strength);
   }
-  if (phase === 'orbit' || phase === 'all') {
+  // Orbit particles are the heaviest layer — skip on low quality.
+  if ((phase === 'orbit' || phase === 'all') && qualityMul >= 0.55) {
     drawSkinOrbit(ctx, radius, profile, time, strength);
   }
 }

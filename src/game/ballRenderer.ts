@@ -3,10 +3,14 @@ import { getSkinImage } from '../shop/skinAssets';
 import { getSkinFx } from '../shop/skinFx';
 import { getSkinTrail, type SkinTrailStyle, type TrailMode } from '../shop/skinTrails';
 import { drawElementalBallFx } from './skinFxRenderer';
+import { fxStrengthForQuality, getRenderQuality, trailMaxForQuality } from './renderQuality';
 
-const TRAIL_MAX = 8;
 const trail: Array<{ x: number; y: number; r: number }> = [];
 let lastTrailSample = 0;
+
+function trailCap(): number {
+  return trailMaxForQuality(getRenderQuality());
+}
 
 export function resetBallTrail(): void {
   trail.length = 0;
@@ -21,7 +25,8 @@ export function sampleBallTrail(x: number, y: number, radius: number, launched: 
   if (time - lastTrailSample < 0.026) return;
   lastTrailSample = time;
   trail.unshift({ x, y, r: radius });
-  if (trail.length > TRAIL_MAX) trail.length = TRAIL_MAX;
+  const max = trailCap();
+  if (trail.length > max) trail.length = max;
 }
 
 function drawFallbackBall(ctx: CanvasRenderingContext2D, radius: number): void {
@@ -175,12 +180,13 @@ export function drawBall(
 ): void {
   const img = getSkinImage(skinId);
   const fx = getSkinFx(skinId);
+  const fxStrength = fxStrengthForQuality();
 
   ctx.save();
   ctx.translate(x, y);
 
-  if (fx.kind !== 'none') {
-    drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'aura' });
+  if (fx.kind !== 'none' && fxStrength > 0.05) {
+    drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'aura', strength: fxStrength });
   }
 
   ctx.save();
@@ -204,8 +210,8 @@ export function drawBall(
     drawFallbackBall(ctx, radius);
   }
 
-  if (fx.kind !== 'none') {
-    drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'overlay' });
+  if (fx.kind !== 'none' && fxStrength > 0.05) {
+    drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'overlay', strength: fxStrength });
   }
 
   const shineTop =
@@ -226,8 +232,8 @@ export function drawBall(
 
   ctx.restore();
 
-  if (fx.kind !== 'none') {
-    drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'orbit' });
+  if (fx.kind !== 'none' && fxStrength > 0.05) {
+    drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'orbit', strength: fxStrength });
   }
 
   ctx.restore();

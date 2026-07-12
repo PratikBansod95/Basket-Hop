@@ -6,6 +6,7 @@ import {
   GRAVITY,
   AIR_DRAG,
   MIN_H_SPEED,
+  MAX_DT,
   RIM_TILT_DAMPING,
   RIM_TILT_MAX,
   RIM_TILT_SPRING,
@@ -19,8 +20,34 @@ import {
 import { debugLog } from './debug';
 import type { Ball, Hoop } from './types';
 
-export function clampDt(dt: number, max = 0.1): number {
+export function clampDt(dt: number, max = MAX_DT): number {
+  if (!Number.isFinite(dt) || dt < 0) return 0;
   return Math.min(dt, max);
+}
+
+/** Fixed simulation step for smooth phone play (60 Hz). */
+export const FIXED_DT = 1 / 60;
+
+/**
+ * Advance simulation with a fixed timestep accumulator.
+ * Returns leftover accumulator time (carry to next frame).
+ */
+export function stepFixed(
+  accumulator: number,
+  rawDt: number,
+  step: (dt: number) => void,
+  maxSteps = 5,
+): number {
+  let acc = accumulator + clampDt(rawDt, 1 / 20);
+  let steps = 0;
+  while (acc >= FIXED_DT && steps < maxSteps) {
+    step(FIXED_DT);
+    acc -= FIXED_DT;
+    steps += 1;
+  }
+  // Drop spiral-of-death remainder if we hit the step cap
+  if (steps >= maxSteps) acc = 0;
+  return acc;
 }
 
 export function integrateBall(
