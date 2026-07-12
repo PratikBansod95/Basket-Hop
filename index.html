@@ -39,19 +39,22 @@
         <canvas id="menu-fx-canvas" class="menu-fx-canvas hidden" aria-hidden="true"></canvas>
 
         <header class="menu-top-bar">
-          <button id="menu-settings-btn" class="menu-icon-btn" type="button" aria-label="Sound on — tap to mute">
+          <button id="menu-settings-btn" class="menu-icon-btn" type="button" aria-label="Settings">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" fill="none" stroke="currentColor" stroke-width="1.8"/>
               <path d="M19.4 15a7.9 7.9 0 000-6l1.7-1-1.5-2.6-2 .5a8 8 0 00-2.6-1.5L14.5 2h-5L9 4.4a8 8 0 00-2.6 1.5l-2-.5L3 7.9l1.7 1a7.9 7.9 0 000 6L3 15.9l1.5 2.6 2-.5a8 8 0 002.6 1.5L9.5 22h5l.5-2.4a8 8 0 002.6-1.5l2 .5 1.5-2.6-1.7-1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
             </svg>
           </button>
 
-          <div class="menu-wallet-pill">
+          <div class="menu-wallet-pill" aria-label="Coin wallet">
             <span class="menu-wallet-coin" aria-hidden="true"></span>
             <span class="menu-wallet-amount" id="menu-top-coins">0</span>
-            <button id="menu-coin-shop-btn" class="menu-wallet-plus" type="button" aria-label="Coin shop">+</button>
           </div>
         </header>
+
+        <button id="menu-shop-btn" class="menu-storefront-btn" type="button" aria-label="Sports shop — buy ball skins">
+          <img src="/assets/sports-shop-icon.png" alt="" width="128" height="128" draggable="false" />
+        </button>
 
         <header class="menu-logo" aria-label="Basket Hop">
           <p class="menu-logo-kicker">
@@ -117,7 +120,7 @@
           </button>
         </div>
 
-        <nav class="menu-bottom-nav" aria-label="Menu shortcuts">
+        <nav class="menu-bottom-nav menu-bottom-nav--compact" aria-label="Menu shortcuts">
           <button type="button" class="menu-nav-btn" id="dock-howto">
             <span class="menu-nav-icon" aria-hidden="true">
               <svg viewBox="0 0 32 32" fill="none">
@@ -137,24 +140,6 @@
               </svg>
             </span>
             <span class="menu-nav-label">Stats</span>
-          </button>
-          <button type="button" class="menu-nav-btn" id="dock-achievements">
-            <span class="menu-nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <circle cx="16" cy="13" r="7" stroke="#1a2b48" stroke-width="1.8"/>
-                <path d="M10 13l2 2 5-6" stroke="#ff7a18" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9 22h14l-1.5 6H10.5L9 22z" fill="#ffd166" stroke="#c9a227" stroke-width="1.2"/>
-              </svg>
-            </span>
-            <span class="menu-nav-label">Achievements</span>
-          </button>
-          <button type="button" class="menu-nav-btn" id="dock-rate">
-            <span class="menu-nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <path d="M16 6l2.8 6.8L26 14l-5.5 4.6L22 26l-6-3.6L10 26l1.5-7.4L6 14l7.2-1.2L16 6z" fill="#ffd166" stroke="#c9a227" stroke-width="1.2" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <span class="menu-nav-label">Rate us</span>
           </button>
         </nav>
 
@@ -233,6 +218,22 @@
 
         </div>
 
+      </div>
+
+      <div id="menu-settings" class="menu-overlay hidden">
+        <div class="menu-modal ui-panel">
+          <h2 class="menu-modal-title">Settings</h2>
+          <div class="menu-settings-row">
+            <span class="menu-settings-label">Sound</span>
+            <button type="button" id="menu-sound-toggle" class="menu-sound-toggle" aria-pressed="true">
+              <span class="menu-sound-toggle-track" aria-hidden="true">
+                <span class="menu-sound-toggle-knob"></span>
+              </span>
+              <span class="menu-sound-toggle-text" id="menu-sound-toggle-text">On</span>
+            </button>
+          </div>
+          <button class="ui-btn ui-btn-primary" id="menu-settings-close-btn" type="button">Done</button>
+        </div>
       </div>
 
       <div id="skins-shop" class="skins-shop hidden" aria-label="Basketball skins shop">

@@ -10,36 +10,41 @@ export class MainMenu {
   private howToRoot: HTMLElement;
   private statsRoot: HTMLElement;
   private infoRoot: HTMLElement;
+  private settingsRoot: HTMLElement;
   private bestEl: HTMLElement;
   private coinsEl: HTMLElement;
   private topCoinsEl: HTMLElement;
   private settingsBtn: HTMLButtonElement;
+  private soundToggleBtn: HTMLButtonElement;
+  private soundToggleText: HTMLElement;
   private statsBestEl: HTMLElement;
   private statsCoinsEl: HTMLElement;
   private statsGamesEl: HTMLElement;
   private statsCleanEl: HTMLElement;
-  private infoTitleEl: HTMLElement;
-  private infoTextEl: HTMLElement;
   private onStart: () => void;
+  private onMuteToggle: (() => void) | null = null;
   private onOpenSkinsShop: (() => void) | null = null;
+  private muted = false;
 
   constructor(onStart: () => void, onMuteToggle?: () => void, onOpenSkinsShop?: () => void) {
     this.onStart = onStart;
+    this.onMuteToggle = onMuteToggle ?? null;
     this.onOpenSkinsShop = onOpenSkinsShop ?? null;
     this.root = document.getElementById('main-menu')!;
     this.howToRoot = document.getElementById('how-to-play')!;
     this.statsRoot = document.getElementById('menu-stats')!;
     this.infoRoot = document.getElementById('menu-info')!;
+    this.settingsRoot = document.getElementById('menu-settings')!;
     this.bestEl = this.root.querySelector('#menu-best-score')!;
     this.coinsEl = this.root.querySelector('#menu-coins')!;
     this.topCoinsEl = this.root.querySelector('#menu-top-coins')!;
     this.settingsBtn = this.root.querySelector('#menu-settings-btn') as HTMLButtonElement;
+    this.soundToggleBtn = document.getElementById('menu-sound-toggle') as HTMLButtonElement;
+    this.soundToggleText = document.getElementById('menu-sound-toggle-text')!;
     this.statsBestEl = document.getElementById('stats-best')!;
     this.statsCoinsEl = document.getElementById('stats-coins')!;
     this.statsGamesEl = document.getElementById('stats-games')!;
     this.statsCleanEl = document.getElementById('stats-clean')!;
-    this.infoTitleEl = document.getElementById('menu-info-title')!;
-    this.infoTextEl = document.getElementById('menu-info-text')!;
 
     this.root.querySelector('#start-btn')!.addEventListener('click', () => {
       this.closeAllModals();
@@ -71,11 +76,23 @@ export class MainMenu {
       if (e.target === this.infoRoot) this.hideInfo();
     });
 
-    this.settingsBtn.addEventListener('click', () => {
-      onMuteToggle?.();
+    this.settingsRoot.querySelector('#menu-settings-close-btn')!.addEventListener('click', () => {
+      this.hideSettings();
     });
 
-    this.root.querySelector('#menu-coin-shop-btn')!.addEventListener('click', () => {
+    this.settingsRoot.addEventListener('click', (e) => {
+      if (e.target === this.settingsRoot) this.hideSettings();
+    });
+
+    this.settingsBtn.addEventListener('click', () => {
+      this.showSettings();
+    });
+
+    this.soundToggleBtn.addEventListener('click', () => {
+      this.onMuteToggle?.();
+    });
+
+    this.root.querySelector('#menu-shop-btn')!.addEventListener('click', () => {
       this.closeAllModals();
       this.onOpenSkinsShop?.();
     });
@@ -87,23 +104,17 @@ export class MainMenu {
     this.root.querySelector('#dock-stats')!.addEventListener('click', () => {
       this.showStats();
     });
-
-    this.root.querySelector('#dock-achievements')!.addEventListener('click', () => {
-      this.showInfo('Achievements', 'Daily challenges and milestone badges are on the way. Keep climbing!');
-    });
-
-    this.root.querySelector('#dock-rate')!.addEventListener('click', () => {
-      this.showInfo('Rate Basket Hop', 'Thanks for playing! A store link will appear here when the game ships.');
-    });
   }
 
   setMuted(muted: boolean): void {
+    this.muted = muted;
     this.settingsBtn.classList.toggle('is-muted', muted);
-    this.settingsBtn.setAttribute(
-      'aria-label',
-      muted ? 'Sound off — tap to unmute' : 'Sound on — tap to mute',
-    );
-    this.settingsBtn.setAttribute('title', muted ? 'Sound off' : 'Sound on');
+    this.settingsBtn.setAttribute('aria-label', muted ? 'Settings — sound is off' : 'Settings');
+    this.settingsBtn.setAttribute('title', 'Settings');
+
+    this.soundToggleBtn.classList.toggle('is-off', muted);
+    this.soundToggleBtn.setAttribute('aria-pressed', muted ? 'false' : 'true');
+    this.soundToggleText.textContent = muted ? 'Off' : 'On';
   }
 
   show(save: SaveData): void {
@@ -131,6 +142,7 @@ export class MainMenu {
   showHowTo(): void {
     this.hideStats();
     this.hideInfo();
+    this.hideSettings();
     this.howToRoot.classList.remove('hidden');
   }
 
@@ -141,6 +153,7 @@ export class MainMenu {
   private showStats(): void {
     this.hideHowTo();
     this.hideInfo();
+    this.hideSettings();
     this.statsRoot.classList.remove('hidden');
   }
 
@@ -148,22 +161,27 @@ export class MainMenu {
     this.statsRoot.classList.add('hidden');
   }
 
-  private showInfo(title: string, message: string): void {
-    this.hideHowTo();
-    this.hideStats();
-    this.infoTitleEl.textContent = title;
-    this.infoTextEl.textContent = message;
-    this.infoRoot.classList.remove('hidden');
-  }
-
   private hideInfo(): void {
     this.infoRoot.classList.add('hidden');
+  }
+
+  private showSettings(): void {
+    this.hideHowTo();
+    this.hideStats();
+    this.hideInfo();
+    this.setMuted(this.muted);
+    this.settingsRoot.classList.remove('hidden');
+  }
+
+  private hideSettings(): void {
+    this.settingsRoot.classList.add('hidden');
   }
 
   private closeAllModals(): void {
     this.hideHowTo();
     this.hideStats();
     this.hideInfo();
+    this.hideSettings();
   }
 
   refreshWallet(save: SaveData): void {

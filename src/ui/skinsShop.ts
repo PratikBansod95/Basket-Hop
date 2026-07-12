@@ -6,6 +6,7 @@ import {
   getSkinsTestUnlockAll,
   type SkinRarity,
 } from '../shop/skins';
+import { getSkinFx } from '../shop/skinFx';
 
 type RarityFilter = 'all' | SkinRarity;
 
@@ -74,10 +75,15 @@ export class SkinsShop {
       const equipped = save.equippedSkin === skin.id;
       const canBuy = !owned && !getSkinsTestUnlockAll() && save.coins >= skin.price;
       const card = document.createElement('button');
+      const fx = getSkinFx(skin.id);
       card.type = 'button';
       card.className = `skins-card rarity-${skin.rarity}`;
+      if (fx.kind !== 'none') card.classList.add(`fx-${fx.kind}`);
       if (equipped) card.classList.add('is-equipped');
       if (!owned && !getSkinsTestUnlockAll()) card.classList.add('is-locked');
+      if (fx.kind !== 'none') {
+        card.style.setProperty('--skin-fx-glow', fx.shopGlow);
+      }
 
       let actionLabel: string;
       if (equipped) actionLabel = 'Equipped';

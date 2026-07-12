@@ -1,9 +1,11 @@
 import type { RunStats, StaminaState } from '../game/types';
+import { getActiveZoneTitle, getZoneLabelOpacity } from '../game/zones';
 
 export class Hud {
   private root: HTMLElement;
   private scoreEl: HTMLElement;
   private scoreWrap: HTMLElement;
+  private zoneLabelEl: HTMLElement;
   private coinsEl: HTMLElement;
   private streakEl: HTMLElement;
   private hintEl: HTMLElement;
@@ -19,14 +21,14 @@ export class Hud {
         <div class="hud-score-wrap" id="score-wrap">
           <span class="hud-score" id="score-pill">0</span>
         </div>
+        <div class="hud-zone-label" id="zone-label" aria-hidden="true"></div>
       </div>
       <div class="coin-meter" id="coin-meter">
         <span class="coin-meter-icon" aria-hidden="true"></span>
-        <span class="coin-meter-text">Coins</span>
         <span class="coin-meter-value" id="coin-count">0</span>
       </div>
       <div class="streak-badge" id="streak-badge">
-        <span class="streak-icon">🔥</span>
+        <span class="streak-icon" aria-hidden="true"></span>
         <span id="streak-text">Hot x2</span>
       </div>
       <div class="stamina-meter" id="stamina-meter">
@@ -39,12 +41,12 @@ export class Hud {
         </div>
       </div>
       <div class="hint-pill" id="hint-pill">
-        <span class="hint-icon">👆</span>
         <span class="hint-text" id="hint">Tap anywhere to play</span>
       </div>
     `;
     this.scoreWrap = this.root.querySelector('#score-wrap')!;
     this.scoreEl = this.root.querySelector('#score-pill')!;
+    this.zoneLabelEl = this.root.querySelector('#zone-label')!;
     this.coinsEl = this.root.querySelector('#coin-count')!;
     this.streakEl = this.root.querySelector('#streak-badge')!;
     this.hintEl = this.root.querySelector('#hint-pill')!;
@@ -77,6 +79,16 @@ export class Hud {
     }
 
     this.coinsEl.textContent = String(runCoins);
+
+    const zoneOpacity = getZoneLabelOpacity(stats.level);
+    if (zoneOpacity > 0.02) {
+      this.zoneLabelEl.textContent = getActiveZoneTitle(stats.level);
+      this.zoneLabelEl.style.opacity = String(zoneOpacity);
+      this.zoneLabelEl.classList.add('visible');
+    } else {
+      this.zoneLabelEl.style.opacity = '0';
+      this.zoneLabelEl.classList.remove('visible');
+    }
 
     const streakText = this.root.querySelector('#streak-text')!;
     if (stats.combo >= 2) {

@@ -21,7 +21,8 @@ import { createHoop, onBasket, syncHoopToCamera, updateHoop } from './hoop';
 import { resetHoopNet, updateHoopNet } from './netPhysics';
 import type { LaunchMechanic } from './mechanics/LaunchMechanic';
 import { clampDt, integrateBall } from './physics';
-import { clearParticles, spawnBurst, updateParticles } from './particles';
+import { clearParticles, spawnBurst, spawnSwishFlash, updateParticles } from './particles';
+import { resetBallTrail } from './ballRenderer';
 import { applyScore, checkScore } from './scoring';
 import { HOOP_GEOMETRY } from './palette';
 import {
@@ -182,6 +183,7 @@ export class Game {
     this.clearBelowY = 0;
     this.pendingCoinRespawn = false;
     clearParticles();
+    resetBallTrail();
     this.launchMechanic.reset();
     this.resetTutorialRunState();
   }
@@ -510,10 +512,11 @@ export class Game {
           this.ball.x,
           this.ball.y,
           scoreResult.isSwish ? '#ffffff' : '#f3c14d',
-          scoreResult.isSwish ? 24 : 14,
+          scoreResult.isSwish ? 28 : 16,
         );
-        this.shake = scoreResult.isSwish ? 14 : 8;
-        this.shakeTimer = scoreResult.isSwish ? 0.25 : 0.15;
+        if (scoreResult.isSwish) spawnSwishFlash(this.ball.x, this.ball.y);
+        this.shake = scoreResult.isSwish ? 16 : 9;
+        this.shakeTimer = scoreResult.isSwish ? 0.32 : 0.18;
         this.callbacks.onScore(scoreResult.points, scoreResult.isSwish);
         if (scoreResult.isSwish) this.callbacks.onSwoosh();
       }

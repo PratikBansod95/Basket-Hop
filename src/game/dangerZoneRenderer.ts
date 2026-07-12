@@ -37,9 +37,9 @@ function drawZoneBand(ctx: CanvasRenderingContext2D, edge: 'top' | 'bottom', alp
       ? ctx.createLinearGradient(0, 0, 0, h)
       : ctx.createLinearGradient(0, CANVAS_HEIGHT - h, 0, CANVAS_HEIGHT);
 
-  grad.addColorStop(0, edge === 'top' ? `rgba(255, 35, 65, ${0.58 * alpha})` : 'rgba(255, 35, 65, 0)');
-  grad.addColorStop(0.45, `rgba(255, 70, 90, ${0.28 * alpha})`);
-  grad.addColorStop(1, edge === 'top' ? 'rgba(255, 35, 65, 0)' : `rgba(255, 35, 65, ${0.58 * alpha})`);
+  grad.addColorStop(0, edge === 'top' ? `rgba(255, 55, 80, ${0.38 * alpha})` : 'rgba(255, 55, 80, 0)');
+  grad.addColorStop(0.45, `rgba(255, 90, 110, ${0.16 * alpha})`);
+  grad.addColorStop(1, edge === 'top' ? 'rgba(255, 55, 80, 0)' : `rgba(255, 55, 80, ${0.38 * alpha})`);
 
   ctx.save();
   ctx.fillStyle = grad;

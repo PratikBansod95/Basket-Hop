@@ -1,5 +1,7 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH, altitudeClimbed } from './constants';
 import { backgroundAssets } from './assetLoader';
+import { getZoneImage } from './zoneAssets';
+import { getZoneAtLevel, getZoneBlend, type ClimbZone } from './zones';
 
 const W = CANVAS_WIDTH;
 const H = CANVAS_HEIGHT;
@@ -12,16 +14,69 @@ export interface SkyParams {
   time: number;
 }
 
-/** Full-screen sky in screen space — one sky-day.png, never tiled. */
-export function drawSkyScreen(ctx: CanvasRenderingContext2D, climbOffset: number, time: number): void {
+/** Backdrop tracks camera climb after baskets (not the ball). */
+const SKY_PARALLAX = 0.42;
+/** Mild overscan so climb can pan without blowing up pixels. */
+const SKY_COVER_SCALE = 1.22;
+
+function skyPanY(climbed: number, maxPan: number): number {
+  if (maxPan <= 0) return 0;
+  return Math.min(maxPan, climbed * SKY_PARALLAX);
+}
+
+/** Full-screen zone backdrops with smooth crossfade by basket level. */
+export function drawSkyScreen(
+  ctx: CanvasRenderingContext2D,
+  climbOffset: number,
+  time: number,
+  level = 0,
+): void {
   const climbed = altitudeClimbed(climbOffset);
+  const blend = getZoneBlend(level);
+
+  const fromImg = getZoneImage(blend.from.id);
+  const toImg = getZoneImage(blend.to.id);
+
+  if (fromImg || toImg) {
+    if (fromImg) {
+      drawCoverImage(ctx, fromImg, climbed, 1);
+    } else {
+      drawZoneFallback(ctx, blend.from, 1);
+    }
+
+    if (blend.t > 0.01 && toImg && blend.to.id !== blend.from.id) {
+      ctx.save();
+      ctx.globalAlpha = blend.t;
+      drawCoverImage(ctx, toImg, climbed, 1);
+      ctx.restore();
+    } else if (blend.t > 0.01 && blend.to.id !== blend.from.id) {
+      ctx.save();
+      ctx.globalAlpha = blend.t;
+      drawZoneFallback(ctx, blend.to, 1);
+      ctx.restore();
+    }
+
+    const active = blend.t >= 0.5 ? blend.to : blend.from;
+    applyTint(ctx, blend.remixTint ?? active.tint);
+    drawVignette(ctx);
+    drawZoneAccents(ctx, active, time, climbed, blend.t >= 0.5 ? 1 : 1 - blend.t);
+    return;
+  }
+
   const duskMix = Math.min(1, Math.max(0, (climbed - 1400) / 900));
   const spaceMix = Math.min(1, Math.max(0, (climbed - 2200) / 1000));
-
   if (backgroundAssets.skyDay) {
-    drawSingleSkyImage(ctx, backgroundAssets.skyDay, climbed, time, duskMix, spaceMix);
+    drawCoverImage(ctx, backgroundAssets.skyDay, climbed, 1);
+    if (duskMix > 0.05) {
+      ctx.fillStyle = `rgba(26,35,126,${duskMix * 0.25})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (spaceMix > 0.05) {
+      ctx.fillStyle = `rgba(5,8,20,${spaceMix * 0.3})`;
+      ctx.fillRect(0, 0, W, H);
+    }
   } else {
-    drawSkyFallback(ctx, duskMix, spaceMix);
+    drawZoneFallback(ctx, getZoneAtLevel(level), 1);
   }
 }
 
@@ -30,58 +85,117 @@ export function drawSkyAtmosphere(ctx: CanvasRenderingContext2D, p: SkyParams): 
   drawSkyScreen(ctx, p.climbOffset, p.time);
 }
 
-/** One drawImage — cover-fit, slow parallax pan as you climb (clamped, no repeat). */
-function drawSingleSkyImage(
+function drawCoverImage(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   climbed: number,
-  time: number,
-  duskMix: number,
-  spaceMix: number,
+  alpha: number,
 ): void {
   const iw = img.naturalWidth;
   const ih = img.naturalHeight;
   if (iw <= 0 || ih <= 0) return;
 
-  const scale = Math.max(W / iw, H / ih);
+  const scale = Math.max(W / iw, H / ih) * SKY_COVER_SCALE;
   const drawW = iw * scale;
   const drawH = ih * scale;
   const x = (W - drawW) / 2;
-
   const maxPan = Math.max(0, drawH - H);
-  const panY = Math.min(maxPan, climbed * 0.14 + time * 4);
-  const y = -panY;
+  const y = -skyPanY(climbed, maxPan);
 
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(img, 0, 0, iw, ih, x, y, drawW, drawH);
-
-  if (duskMix > 0.05) {
-    ctx.fillStyle = `rgba(26,35,126,${duskMix * 0.4})`;
-    ctx.fillRect(0, 0, W, H);
-  }
-  if (spaceMix > 0.05) {
-    ctx.fillStyle = `rgba(5,8,20,${spaceMix * 0.5})`;
-    ctx.fillRect(0, 0, W, H);
-  }
+  ctx.restore();
 }
 
-function drawSkyFallback(
-  ctx: CanvasRenderingContext2D,
-  duskMix: number,
-  spaceMix: number,
-): void {
+function applyTint(ctx: CanvasRenderingContext2D, tint: string | undefined): void {
+  if (!tint) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = tint;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+function drawVignette(ctx: CanvasRenderingContext2D): void {
+  const g = ctx.createRadialGradient(W * 0.5, H * 0.42, H * 0.2, W * 0.5, H * 0.5, H * 0.78);
+  g.addColorStop(0, 'rgba(255,252,245,0.04)');
+  g.addColorStop(0.55, 'rgba(255,252,245,0)');
+  g.addColorStop(1, 'rgba(20, 28, 48, 0.22)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawZoneFallback(ctx: CanvasRenderingContext2D, zone: ClimbZone, alpha: number): void {
+  ctx.save();
+  ctx.globalAlpha = alpha;
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#1565C0');
-  grad.addColorStop(0.5, '#42A5F5');
-  grad.addColorStop(1, '#B3E5FC');
+  switch (zone.id) {
+    case 'everest':
+      grad.addColorStop(0, '#cfe8ff');
+      grad.addColorStop(1, '#f7fbff');
+      break;
+    case 'heaven':
+      grad.addColorStop(0, '#ffe9b0');
+      grad.addColorStop(1, '#fff8e8');
+      break;
+    case 'space':
+    case 'deepspace':
+      grad.addColorStop(0, '#d8e7ff');
+      grad.addColorStop(1, '#eef4ff');
+      break;
+    case 'nebula':
+      grad.addColorStop(0, '#f0d8ff');
+      grad.addColorStop(1, '#e8f0ff');
+      break;
+    case 'void':
+      grad.addColorStop(0, '#e6e9f5');
+      grad.addColorStop(1, '#f4f6fb');
+      break;
+    default:
+      grad.addColorStop(0, '#7ec8ff');
+      grad.addColorStop(0.55, '#b8e4ff');
+      grad.addColorStop(1, '#e8f6ff');
+  }
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
 
-  if (duskMix > 0.05) {
-    ctx.fillStyle = `rgba(26,35,126,${duskMix * 0.4})`;
-    ctx.fillRect(0, 0, W, H);
+function drawZoneAccents(
+  ctx: CanvasRenderingContext2D,
+  zone: ClimbZone,
+  time: number,
+  climbed: number,
+  strength: number,
+): void {
+  if (strength < 0.05 || zone.accent === 'none') return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, strength);
+  const drift = climbed * SKY_PARALLAX * 0.35;
+
+  if (zone.accent === 'snow') {
+    for (let i = 0; i < 28; i += 1) {
+      const x = ((i * 97 + time * 40) % (W + 40)) - 20;
+      const y = ((i * 53 + time * 55 + drift) % (H + 40)) - 20;
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.beginPath();
+      ctx.arc(x, y, 1.4 + (i % 3) * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
-  if (spaceMix > 0.05) {
-    ctx.fillStyle = `rgba(5,8,20,${spaceMix * 0.5})`;
-    ctx.fillRect(0, 0, W, H);
+
+  if (zone.accent === 'stars' || zone.accent === 'nebula') {
+    for (let i = 0; i < 36; i += 1) {
+      const twinkle = 0.2 + 0.55 * (0.5 + 0.5 * Math.sin(time * 3 + i));
+      const x = (i * 173) % W;
+      const y = ((i * 97 + drift * 0.5) % H + H) % H;
+      ctx.fillStyle = `rgba(255,255,255,${twinkle * (zone.accent === 'nebula' ? 0.45 : 0.7)})`;
+      ctx.fillRect(x, y, i % 5 === 0 ? 2 : 1, i % 5 === 0 ? 2 : 1);
+    }
   }
+
+  ctx.restore();
 }

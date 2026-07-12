@@ -44,5 +44,5 @@ export function renderMenuHomeFx(
   ctx.fill();
   ctx.restore();
 
-  drawBall(ctx, x, y, radius, time * 2.8, skinId);
+  drawBall(ctx, x, y, radius, time * 2.8, skinId, time, true);
 }

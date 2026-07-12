@@ -85,8 +85,8 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #fff2b5, #ffd166 45%, #f59e0b 100%);
-  box-shadow: inset 0 0 0 1px rgba(135, 74, 5, 0.45);
+  background: url('/assets/coin.png') center / cover no-repeat;
+  box-shadow: 0 1px 3px rgba(135, 74, 5, 0.35);
 }
 
 .skins-shop-close {
@@ -194,6 +194,35 @@
   overflow: hidden;
   margin-top: 4px;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+
+.skins-card[class*='fx-'] .skins-card-preview {
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.35),
+    0 0 18px var(--skin-fx-glow, transparent),
+    0 0 34px var(--skin-fx-glow, transparent);
+  animation: skins-fx-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes skins-fx-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.08);
+  }
+}
+
+.skins-card.fx-flame .skins-card-preview,
+.skins-card.fx-lava .skins-card-preview,
+.skins-card.fx-dragon .skins-card-preview {
+  animation-duration: 1.6s;
+}
+
+.skins-card.fx-neon .skins-card-preview,
+.skins-card.fx-electro .skins-card-preview {
+  animation-duration: 1.2s;
 }
 
 .skins-card-preview img {

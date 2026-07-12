@@ -7,6 +7,8 @@ import { GamePhase } from './game/types';
 import { DefaultTapLaunch } from './game/mechanics/defaultTapLaunch';
 import { render, renderLoading } from './game/renderer';
 import { preloadBackgroundAssets } from './game/assetLoader';
+import { preloadCoinAsset } from './game/coinRenderer';
+import { preloadZoneAssets } from './game/zoneAssets';
 import { createPlatform } from './platform/youtube';
 import { mergeRunIntoSave, type SaveData } from './platform/types';
 import { normalizeSkinSave } from './shop/skinEconomy';
@@ -113,7 +115,9 @@ async function main(): Promise<void> {
   resize();
   renderLoading(ctx);
   void preloadBackgroundAssets();
+  void preloadCoinAsset();
   void preloadSkinAssets();
+  void preloadZoneAssets();
 
   const game = new Game(launchMechanic, {
     onTap: () => {
@@ -229,6 +233,7 @@ async function main(): Promise<void> {
           shake: game.shake,
           climbOffset: game.climbOffset,
           time: game.time,
+          level: game.stats.level,
         },
         DEBUG ? game.colliders : undefined,
         saveData.equippedSkin,

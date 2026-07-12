@@ -1,5 +1,6 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH, WORLD } from './constants';
 import { backgroundAssets } from './assetLoader';
+import { getCourtWorldOpacity } from './zones';
 
 const W = CANVAS_WIDTH;
 const H = CANVAS_HEIGHT;
@@ -8,13 +9,25 @@ const OPEN_COURT_TOP = WORLD.stadiumTop - 220;
 const OPEN_COURT_BOTTOM = WORLD.courtFloorY + 60;
 
 /** Court + open sky merge in world space (sky image is screen-space behind this). */
-export function drawWorld(ctx: CanvasRenderingContext2D, climbOffset: number, _time: number): void {
+export function drawWorld(
+  ctx: CanvasRenderingContext2D,
+  climbOffset: number,
+  _time: number,
+  level = 0,
+): void {
+  const opacity = getCourtWorldOpacity(level);
+  if (opacity <= 0.01) return;
+
   const viewTop = -climbOffset;
   const viewBottom = viewTop + H;
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
 
   if (backgroundAssets.openCourt) {
     drawOpenCourtGround(ctx, viewTop, viewBottom);
     drawBelowCourtVoid(ctx, viewTop, viewBottom);
+    ctx.restore();
     return;
   }
 
@@ -28,6 +41,7 @@ export function drawWorld(ctx: CanvasRenderingContext2D, climbOffset: number, _t
 
   drawCourtFloor(ctx, viewTop, viewBottom);
   drawBelowCourtVoid(ctx, viewTop, viewBottom);
+  ctx.restore();
 }
 
 /** Open court with transparent sky slot — sky-day.png shows through the top. */

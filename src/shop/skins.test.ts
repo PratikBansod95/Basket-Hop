@@ -78,11 +78,11 @@ describe('skin economy', () => {
     setSkinsTestUnlockAll(false);
     const save = {
       ...DEFAULT_SAVE,
-      ownedSkins: ['classic', 'gold'],
+      ownedSkins: ['classic', 'zombie'],
       equippedSkin: 'classic',
     };
-    expect(ownsSkin(save, 'gold')).toBe(true);
-    expect(equipSkin(save, 'gold')?.equippedSkin).toBe('gold');
+    expect(ownsSkin(save, 'zombie')).toBe(true);
+    expect(equipSkin(save, 'zombie')?.equippedSkin).toBe('zombie');
     expect(equipSkin(save, 'dragon')).toBeNull();
   });
 
