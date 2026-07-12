@@ -23,7 +23,6 @@ import { getRenderQuality } from './renderQuality';
 import type { LaunchMechanic } from './mechanics/LaunchMechanic';
 import { clampDt, integrateBall } from './physics';
 import { clearParticles, spawnBurst, spawnSwishFlash, updateParticles } from './particles';
-import { resetBallTrail } from './ballRenderer';
 import { applyScore, checkScore } from './scoring';
 import { HOOP_GEOMETRY } from './palette';
 import {
@@ -195,7 +194,6 @@ export class Game {
     this.clearBelowY = 0;
     this.pendingCoinRespawn = false;
     clearParticles();
-    resetBallTrail();
     this.launchMechanic.reset();
     this.resetTutorialRunState();
     this.syncRenderPrev();

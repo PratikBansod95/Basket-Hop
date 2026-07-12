@@ -262,7 +262,7 @@ async function main(): Promise<void> {
       setMenuFxVisible(true);
     } else {
       setMenuFxVisible(false);
-      // Continuous display time for idle bob / trail sampling (avoids step-quantized FX).
+      // Continuous display time for idle bob / FX (avoids step-quantized motion).
       const displayTime = game.time + physicsAcc;
       render(
         ctx,

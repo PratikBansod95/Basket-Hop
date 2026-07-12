@@ -1,37 +1,8 @@
 import { DEFAULT_SKIN_ID } from '../shop/skins';
 import { getSkinImage } from '../shop/skinAssets';
 import { getSkinFx } from '../shop/skinFx';
-import { getSkinTrail, type SkinTrailStyle, type TrailMode } from '../shop/skinTrails';
 import { drawElementalBallFx } from './skinFxRenderer';
-import { fxStrengthForQuality, getRenderQuality, trailMaxForQuality, allowOverlayFx, allowOrbitFx, allowTrailGlow } from './renderQuality';
-
-const trail: Array<{ x: number; y: number; r: number }> = [];
-let lastTrailSample = 0;
-
-function trailCap(): number {
-  return trailMaxForQuality(getRenderQuality());
-}
-
-export function resetBallTrail(): void {
-  trail.length = 0;
-  lastTrailSample = 0;
-}
-
-export function sampleBallTrail(x: number, y: number, radius: number, launched: boolean, time: number): void {
-  if (!launched) {
-    trail.length = 0;
-    return;
-  }
-  const max = trailCap();
-  if (max <= 0) {
-    trail.length = 0;
-    return;
-  }
-  if (time - lastTrailSample < 0.026) return;
-  lastTrailSample = time;
-  trail.unshift({ x, y, r: radius });
-  if (trail.length > max) trail.length = max;
-}
+import { fxStrengthForQuality, getRenderQuality, allowOverlayFx, allowOrbitFx } from './renderQuality';
 
 function drawFallbackBall(ctx: CanvasRenderingContext2D, radius: number): void {
   const grad = ctx.createRadialGradient(-radius * 0.25, -radius * 0.25, radius * 0.1, 0, 0, radius);
@@ -72,104 +43,6 @@ export function drawBallShadow(
   ctx.ellipse(x, floorY - 2, radius * 1.25 * scale, radius * 0.32 * scale, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-}
-
-function trailColor(style: SkinTrailStyle, index: number): string {
-  return style.colors[index % style.colors.length];
-}
-
-function drawStar(ctx: CanvasRenderingContext2D, size: number): void {
-  ctx.beginPath();
-  for (let i = 0; i < 4; i += 1) {
-    const a = (i * Math.PI) / 2;
-    ctx.moveTo(0, 0);
-    ctx.lineTo(Math.cos(a) * size, Math.sin(a) * size);
-  }
-  ctx.lineWidth = Math.max(1.2, size * 0.35);
-  ctx.lineCap = 'round';
-  ctx.stroke();
-}
-
-function drawTrailGhost(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  radius: number,
-  fade: number,
-  color: string,
-  mode: TrailMode,
-  style: SkinTrailStyle,
-): void {
-  const r = radius * (0.5 + fade * 0.4) * style.scale;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.globalAlpha = Math.min(1, (0.1 + fade * 0.28) * style.alpha);
-
-  if (style.glow && allowTrailGlow()) {
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 12 + fade * 10;
-  }
-
-  if (mode === 'ripple') {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2 + fade * 1.5;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * (1.05 + (1 - fade) * 0.35), 0, Math.PI * 2);
-    ctx.stroke();
-  } else if (mode === 'ember') {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.ellipse(0, r * 0.15, r * 0.7, r * (0.95 + (1 - fade) * 0.35), 0, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (mode === 'ice') {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha *= 0.85;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.5;
-    drawStar(ctx, r * 0.55);
-  } else if (mode === 'neon') {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.75, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha *= 0.55;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
-    ctx.stroke();
-  } else if (mode === 'spark' || mode === 'star') {
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
-    drawStar(ctx, r * (mode === 'star' ? 0.85 : 0.7));
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (mode === 'smoke') {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * (1.1 + (1 - fade) * 0.4), 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-export function drawBallTrail(ctx: CanvasRenderingContext2D, skinId: string = DEFAULT_SKIN_ID): void {
-  const style = getSkinTrail(skinId);
-  for (let i = trail.length - 1; i >= 0; i -= 1) {
-    const t = trail[i];
-    const fade = (trail.length - i) / (trail.length + 1);
-    drawTrailGhost(ctx, t.x, t.y, t.r, fade, trailColor(style, i), style.mode, style);
-  }
 }
 
 export function drawBall(

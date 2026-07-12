@@ -2,7 +2,7 @@
  * Adaptive render quality for phones (fill-rate + particle cost).
  * Prefer fewer canvas effects over dropping simulation rate.
  *
- * Phones start on `medium` (light trails + aura). Auto-downgrade to `low`
+ * Phones start on `medium` (aura FX). Auto-downgrade to `low`
  * if frames stay unhealthy; promote back when healthy.
  */
 
@@ -22,7 +22,7 @@ function detectBaseQuality(): RenderQuality {
   const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const narrow = Math.min(window.innerWidth, window.innerHeight) < 520;
 
-  // Touch / phone-class: start medium so trails + aura stay visible.
+  // Touch / phone-class: start medium so soft aura stays visible.
   if (coarse || narrow) {
     if (mem !== undefined && mem <= 2) return 'low';
     return 'medium';
@@ -66,12 +66,6 @@ export function noteFrameTime(dtMs: number): void {
   }
 }
 
-export function trailMaxForQuality(q: RenderQuality = getRenderQuality()): number {
-  if (q === 'low') return 3;
-  if (q === 'medium') return 6;
-  return 8;
-}
-
 export function fxStrengthForQuality(q: RenderQuality = getRenderQuality()): number {
   if (q === 'low') return 0.4;
   if (q === 'medium') return 0.7;
@@ -83,10 +77,6 @@ export function allowOverlayFx(q: RenderQuality = getRenderQuality()): boolean {
 }
 
 export function allowOrbitFx(q: RenderQuality = getRenderQuality()): boolean {
-  return q === 'high';
-}
-
-export function allowTrailGlow(q: RenderQuality = getRenderQuality()): boolean {
   return q === 'high';
 }
 

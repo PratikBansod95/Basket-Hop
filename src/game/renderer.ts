@@ -4,7 +4,7 @@ import { drawDebugColliders } from './debug';
 import { drawDangerZones } from './dangerZoneRenderer';
 import { drawWorld } from './worldRenderer';
 import { drawSkyScreen } from './skyRenderer';
-import { drawBall, drawBallShadow, drawBallTrail, sampleBallTrail } from './ballRenderer';
+import { drawBall, drawBallShadow } from './ballRenderer';
 import { drawCoin } from './coinRenderer';
 import { drawHoopNet, drawHoopRim, drawHoopShadow } from './hoopRenderer';
 import type { Coin, FloatingText, Hoop } from './types';
@@ -88,8 +88,6 @@ export function render(
   const idleBob = ball.hasLaunched ? 0 : Math.sin(state.time * 2.8) * 5;
   const ballDrawY = ball.y + idleBob;
 
-  sampleBallTrail(ball.x, ballDrawY, ball.radius, ball.hasLaunched, state.time);
-  drawBallTrail(ctx, skinId);
   drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, FLOOR_Y);
   drawBall(ctx, ball.x, ballDrawY, ball.radius, ball.rotation, skinId, state.time, ball.hasLaunched);
   drawHoopRim(ctx, hoop);
