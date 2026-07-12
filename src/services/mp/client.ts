@@ -36,6 +36,11 @@ export class MpClient {
 
   constructor(private handlers: MpClientHandlers) {}
 
+  /** Swap message handlers after lobby → match handoff. */
+  setHandlers(handlers: MpClientHandlers): void {
+    this.handlers = handlers;
+  }
+
   get connected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
   }

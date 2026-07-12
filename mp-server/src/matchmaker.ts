@@ -1,8 +1,12 @@
 import type { WebSocket } from 'ws';
 import {
+  MATCH_COUNTDOWN_SEC,
   makeRoomCode,
   makeRoomId,
   roomPlayersList,
+  type MpClientMessage,
+  type MpMatchResult,
+  type MpMatchSnapshot,
   type MpServerMessage,
   type Room,
   type Session,
@@ -53,8 +57,9 @@ export class MatchMaker {
     ws.send(JSON.stringify(message));
   }
 
-  private broadcastRoom(room: Room, message: MpServerMessage): void {
+  private broadcastRoom(room: Room, message: MpServerMessage, exceptPlayerId?: string): void {
     for (const playerId of room.players.keys()) {
+      if (exceptPlayerId && playerId === exceptPlayerId) continue;
       const session = this.byPlayerId.get(playerId);
       if (session) this.send(session.ws, message);
     }
@@ -76,6 +81,45 @@ export class MatchMaker {
       const session = this.byPlayerId.get(playerId);
       if (session) this.send(session.ws, this.roomPayload(room, playerId));
     }
+  }
+
+  private clearCountdown(room: Room): void {
+    if (room.countdownTimer) {
+      clearInterval(room.countdownTimer);
+      room.countdownTimer = null;
+    }
+  }
+
+  private maybeBeginMatch(room: Room): void {
+    if (room.players.size < 2 || room.phase !== 'lobby') return;
+    this.clearCountdown(room);
+    room.phase = 'countdown';
+    let seconds = MATCH_COUNTDOWN_SEC;
+    const players = roomPlayersList(room);
+    this.broadcastRoom(room, { type: 'match_countdown', seconds, players });
+    this.notifyRoom(room);
+
+    room.countdownTimer = setInterval(() => {
+      seconds -= 1;
+      if (seconds > 0) {
+        this.broadcastRoom(room, { type: 'match_countdown', seconds, players });
+        return;
+      }
+      this.clearCountdown(room);
+      room.phase = 'playing';
+      for (const [playerId, info] of room.players) {
+        const session = this.byPlayerId.get(playerId);
+        if (!session) continue;
+        this.send(session.ws, {
+          type: 'match_start',
+          roomId: room.id,
+          yourSlot: info.slot,
+          youAreHost: room.hostPlayerId === playerId,
+          players,
+        });
+      }
+      this.notifyRoom(room);
+    }, 1000);
   }
 
   enqueue(session: Session): void {
@@ -138,11 +182,20 @@ export class MatchMaker {
       });
       return;
     }
+    if (room.phase !== 'lobby') {
+      this.send(session.ws, {
+        type: 'error',
+        code: 'room_started',
+        message: 'That match already started.',
+      });
+      return;
+    }
     this.dequeue(session);
     this.leaveRoom(session);
     room.players.set(session.playerId, { nickname: session.nickname, slot: 1 });
     session.roomId = room.id;
     this.notifyRoom(room);
+    this.maybeBeginMatch(room);
   }
 
   private createPairedRoom(
@@ -157,6 +210,7 @@ export class MatchMaker {
       players: new Map([[host.playerId, { nickname: host.nickname, slot: 0 }]]),
       phase: 'lobby',
       createdAt: Date.now(),
+      countdownTimer: null,
     };
     if (guest) {
       room.players.set(guest.playerId, { nickname: guest.nickname, slot: 1 });
@@ -168,6 +222,59 @@ export class MatchMaker {
     this.rooms.set(room.id, room);
     if (code) this.roomsByCode.set(code, room.id);
     this.notifyRoom(room);
+    this.maybeBeginMatch(room);
+  }
+
+  handleMatchMessage(session: Session, message: MpClientMessage): void {
+    if (!session.roomId) {
+      this.send(session.ws, {
+        type: 'error',
+        code: 'not_in_room',
+        message: 'Join a room before sending match messages.',
+      });
+      return;
+    }
+    const room = this.rooms.get(session.roomId);
+    if (!room) return;
+    const member = room.players.get(session.playerId);
+    if (!member) return;
+
+    if (message.type === 'tap') {
+      if (room.phase !== 'playing') return;
+      if (message.slot !== member.slot) {
+        this.send(session.ws, {
+          type: 'error',
+          code: 'bad_slot',
+          message: 'You can only tap your own ball.',
+        });
+        return;
+      }
+      // Relay guest taps to host; host applies locally (no echo).
+      if (session.playerId === room.hostPlayerId) return;
+      const host = this.byPlayerId.get(room.hostPlayerId);
+      if (host) this.send(host.ws, { type: 'tap', slot: message.slot });
+      return;
+    }
+
+    if (message.type === 'snapshot') {
+      if (session.playerId !== room.hostPlayerId || room.phase !== 'playing') return;
+      this.broadcastRoom(room, { type: 'snapshot', state: message.state }, session.playerId);
+      return;
+    }
+
+    if (message.type === 'match_end') {
+      if (session.playerId !== room.hostPlayerId || room.phase !== 'playing') return;
+      // Host already showed locally — only relay to guest(s).
+      this.finishMatch(room, message.result, room.hostPlayerId);
+    }
+  }
+
+  private finishMatch(room: Room, result: MpMatchResult, exceptPlayerId?: string): void {
+    if (room.phase === 'ended') return;
+    this.clearCountdown(room);
+    room.phase = 'ended';
+    this.broadcastRoom(room, { type: 'match_end', result }, exceptPlayerId);
+    this.notifyRoom(room);
   }
 
   leaveRoom(session: Session): void {
@@ -177,16 +284,29 @@ export class MatchMaker {
     if (!room) return;
 
     const left = room.players.get(session.playerId);
+    const wasPlaying = room.phase === 'playing' || room.phase === 'countdown';
     room.players.delete(session.playerId);
     this.send(session.ws, { type: 'room_left' });
 
     if (room.players.size === 0) {
+      this.clearCountdown(room);
       this.rooms.delete(room.id);
       if (room.code) this.roomsByCode.delete(room.code);
       return;
     }
 
-    if (room.hostPlayerId === session.playerId) {
+    if (wasPlaying && left) {
+      const remaining = [...room.players.entries()][0]!;
+      const winner: MpMatchResult['winner'] = remaining[1].slot === 0 ? 'p1' : 'p2';
+      this.finishMatch(room, {
+        scoreP1: 0,
+        scoreP2: 0,
+        winner,
+        reason: 'forfeit',
+      });
+    }
+
+    if (room.hostPlayerId === session.playerId && room.players.size > 0) {
       room.hostPlayerId = [...room.players.keys()][0]!;
     }
 

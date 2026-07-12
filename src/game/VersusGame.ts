@@ -183,6 +183,83 @@ export class VersusGame {
     return this.shake;
   }
 
+  exportSnapshot(seq: number): import('../../shared/contracts/mp').MpMatchSnapshot {
+    return {
+      seq,
+      timeLeft: this.timeLeft,
+      scoreP1: this.scoreP1,
+      scoreP2: this.scoreP2,
+      climbOffset: this.climbOffset,
+      targetClimbOffset: this.targetClimbOffset,
+      climbAnimating: this.climbAnimating,
+      hoop: {
+        side: this.hoop.side,
+        x: this.hoop.x,
+        y: this.hoop.y,
+        targetX: this.hoop.targetX,
+        targetY: this.hoop.targetY,
+        slideFromX: this.hoop.slideFromX,
+        slideFromY: this.hoop.slideFromY,
+        slideT: this.hoop.slideT,
+        tilt: this.hoop.tilt,
+        tiltVel: this.hoop.tiltVel,
+        animating: this.hoop.animating,
+      },
+      balls: [
+        {
+          x: this.balls[0].x,
+          y: this.balls[0].y,
+          vx: this.balls[0].vx,
+          vy: this.balls[0].vy,
+          rotation: this.balls[0].rotation,
+          hasLaunched: this.balls[0].hasLaunched,
+          fallingThrough: this.balls[0].fallingThrough,
+          scoredThisShot: this.balls[0].scoredThisShot,
+          hitRimThisShot: this.balls[0].hitRimThisShot,
+        },
+        {
+          x: this.balls[1].x,
+          y: this.balls[1].y,
+          vx: this.balls[1].vx,
+          vy: this.balls[1].vy,
+          rotation: this.balls[1].rotation,
+          hasLaunched: this.balls[1].hasLaunched,
+          fallingThrough: this.balls[1].fallingThrough,
+          scoredThisShot: this.balls[1].scoredThisShot,
+          hitRimThisShot: this.balls[1].hitRimThisShot,
+        },
+      ],
+    };
+  }
+
+  applySnapshot(state: import('../../shared/contracts/mp').MpMatchSnapshot): void {
+    this.captureRenderPrev();
+    this.phase = GamePhase.Playing;
+    this.timeLeft = state.timeLeft;
+    this.scoreP1 = state.scoreP1;
+    this.scoreP2 = state.scoreP2;
+    this.climbOffset = state.climbOffset;
+    this.targetClimbOffset = state.targetClimbOffset;
+    this.climbAnimating = state.climbAnimating;
+    Object.assign(this.hoop, state.hoop);
+    for (let i = 0; i < 2; i += 1) {
+      const ball = this.balls[i];
+      const snap = state.balls[i];
+      ball.x = snap.x;
+      ball.y = snap.y;
+      ball.vx = snap.vx;
+      ball.vy = snap.vy;
+      ball.rotation = snap.rotation;
+      ball.hasLaunched = snap.hasLaunched;
+      ball.fallingThrough = snap.fallingThrough;
+      ball.scoredThisShot = snap.scoredThisShot;
+      ball.hitRimThisShot = snap.hitRimThisShot;
+      ball.frameStartX = snap.x;
+      ball.frameStartY = snap.y;
+      ball.frameStartVelY = snap.vy;
+    }
+  }
+
   handleTap(player: VersusPlayerId): void {
     if (this.paused || this.ended) return;
     if (this.phase === GamePhase.Menu || this.phase === GamePhase.GameOver) return;
@@ -242,6 +319,12 @@ export class VersusGame {
     }
     const step = Math.sign(dy) * Math.min(Math.abs(dy), SCROLL_SPEED * dt);
     this.climbOffset += step;
+  }
+
+  /** Mark over without firing onMatchEnd (used by online guest / forfeit). */
+  markMatchOver(): void {
+    this.ended = true;
+    this.phase = GamePhase.GameOver;
   }
 
   private finishMatch(): void {

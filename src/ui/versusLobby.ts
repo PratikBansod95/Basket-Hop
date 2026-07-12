@@ -5,6 +5,8 @@ import type { MpPlayerInfo, MpServerMessage } from '../../shared/contracts/mp';
 export type VersusLobbyActions = {
   getSave: () => SaveData;
   onLocalVersus: () => void;
+  /** Online match is starting — keep the MpClient alive and hide lobby. */
+  onOnlineMatch: (mp: MpClient, initial?: MpServerMessage) => void;
   onClose: () => void;
 };
 
@@ -18,6 +20,7 @@ export class VersusLobby {
   private mp: MpClient | null = null;
   private nickname = '';
   private pendingAction: (() => void) | null = null;
+  private handoff = false;
 
   constructor(private actions: VersusLobbyActions) {
     this.root = document.getElementById('versus-lobby')!;
@@ -63,6 +66,7 @@ export class VersusLobby {
   }
 
   show(): void {
+    this.handoff = false;
     this.root.classList.remove('hidden');
     this.showActions();
     const url = getMpWsUrl();
@@ -75,8 +79,10 @@ export class VersusLobby {
 
   close(): void {
     this.pendingAction = null;
-    this.mp?.disconnect();
-    this.mp = null;
+    if (!this.handoff) {
+      this.mp?.disconnect();
+      this.mp = null;
+    }
     this.nickname = '';
     this.root.classList.add('hidden');
     this.actions.onClose();
@@ -108,6 +114,7 @@ export class VersusLobby {
     this.mp = new MpClient({
       onMessage: (message) => this.onMessage(message),
       onClose: () => {
+        if (this.handoff) return;
         this.nickname = '';
         this.setStatus('Disconnected from match server.');
         this.showActions();
@@ -115,6 +122,15 @@ export class VersusLobby {
       onError: (message) => this.setStatus(message),
     });
     this.mp.connect(save.playerId);
+  }
+
+  private handoffToMatch(message?: MpServerMessage): void {
+    if (!this.mp || this.handoff) return;
+    this.handoff = true;
+    const client = this.mp;
+    this.mp = null;
+    this.root.classList.add('hidden');
+    this.actions.onOnlineMatch(client, message);
   }
 
   private onMessage(message: MpServerMessage): void {
@@ -136,6 +152,16 @@ export class VersusLobby {
         break;
       case 'room':
         this.showRoom(message.players, message.code, message.youAreHost);
+        break;
+      case 'match_countdown':
+        this.setStatus(`Match starting in ${message.seconds}…`);
+        this.showRoom(message.players, null, false);
+        if (message.seconds <= 1) {
+          // Keep lobby visible through countdown; handoff on match_start.
+        }
+        break;
+      case 'match_start':
+        this.handoffToMatch(message);
         break;
       case 'room_left':
         this.showActions();
@@ -159,12 +185,12 @@ export class VersusLobby {
     this.panelRoom.classList.remove('hidden');
     const names = players.map((p) => `${p.slot === 0 ? 'P1' : 'P2'}: ${p.nickname}`).join(' · ');
     const codeLine = code ? `Code: ${code}` : 'Quick match';
-    const hostLine = youAreHost ? 'You are host' : 'Waiting for host';
+    const hostLine = youAreHost ? 'You are host' : 'Opponent connected';
     this.roomEl.textContent = `${codeLine}\n${names}\n${hostLine}`;
     if (players.length < 2) {
-      this.setStatus('Room ready — waiting for a second player. Match play comes next.');
+      this.setStatus('Room ready — waiting for a second player.');
     } else {
-      this.setStatus('Both players connected! Live match sync is the next build step.');
+      this.setStatus('Both players connected — match starting…');
     }
   }
 

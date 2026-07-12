@@ -34,11 +34,15 @@ import {
   shakeScaleForQuality,
 } from './game/renderQuality';
 import { newClientRunId, submitSoloRunScore } from './services/api/submitRun';
+import { MpClient } from './services/mp/client';
+import { OnlineVersusSession } from './services/mp/onlineVersus';
+import type { MpServerMessage } from '../shared/contracts/mp';
 
 const launchMechanic = new DefaultTapLaunch();
 const versusLaunchMechanic = new DefaultTapLaunch();
 
 type ActiveMode = 'menu' | 'solo' | 'versus';
+type VersusKind = 'local' | 'online';
 
 async function main(): Promise<void> {
   const platform = createPlatform();
@@ -53,6 +57,10 @@ async function main(): Promise<void> {
   let physicsAcc = 0;
   let currentRunId = newClientRunId();
   let activeMode: ActiveMode = 'menu';
+  let versusKind: VersusKind = 'local';
+  let onlineMp: MpClient | null = null;
+  let onlineSession: OnlineVersusSession | null = null;
+  let onlineLabels = { p1: 'P1', p2: 'P2' };
 
   let saveData: SaveData = normalizeSkinSave(await platform.loadSave());
   // Persist migrated identity fields (playerId) for older local saves.
@@ -108,13 +116,23 @@ async function main(): Promise<void> {
   gameOverModal.setAdsMode(platform.isAdsMode());
 
   const versusResultModal = new VersusResultModal(
-    () => requireNicknameThen(() => startVersusRun()),
+    () => {
+      requireNicknameThen(() => {
+        if (versusKind === 'online') {
+          cleanupOnline();
+          versusLobby.show();
+          return;
+        }
+        startVersusRun();
+      });
+    },
     () => goToMainMenu(),
   );
 
   const versusLobby = new VersusLobby({
     getSave: () => saveData,
     onLocalVersus: () => requireNicknameThen(() => startVersusRun()),
+    onOnlineMatch: (mp, initial) => startOnlineVersus(mp, initial),
     onClose: () => {},
   });
 
@@ -228,10 +246,100 @@ async function main(): Promise<void> {
     onSwoosh: () => sfx.swoosh(),
     onScore: () => {},
     onMatchEnd: (result) => {
+      if (onlineSession?.active && onlineSession.youAreHost) {
+        onlineSession.publishMatchEnd(result);
+        return;
+      }
+      if (onlineSession?.active && !onlineSession.youAreHost) {
+        // Guest waits for authoritative match_end from the host.
+        return;
+      }
       sfx.gameOver();
-      versusResultModal.show(result);
+      versusResultModal.show(result, onlineLabels);
     },
   });
+
+  function cleanupOnline(): void {
+    onlineSession?.dispose();
+    onlineSession = null;
+    onlineMp?.disconnect();
+    onlineMp = null;
+  }
+
+  function showOnlineResult(
+    result: {
+      scoreP1: number;
+      scoreP2: number;
+      winner: 'p1' | 'p2' | 'draw';
+      durationSec: number;
+      reason: 'timer' | 'forfeit';
+    },
+  ): void {
+    sfx.gameOver();
+    versusResultModal.show(result, {
+      ...onlineLabels,
+      forfeit: result.reason === 'forfeit',
+    });
+  }
+
+  function startOnlineVersus(mp: MpClient, initial?: MpServerMessage): void {
+    cleanupOnline();
+    versusKind = 'online';
+    onlineMp = mp;
+    onlineSession = new OnlineVersusSession(mp, versusGame, {
+      onCountdown: () => {},
+      onMatchStart: ({ yourSlot, youAreHost, players }) => {
+        const p1 = players.find((p) => p.slot === 0)?.nickname ?? 'P1';
+        const p2 = players.find((p) => p.slot === 1)?.nickname ?? 'P2';
+        onlineLabels = { p1, p2 };
+        const you = yourSlot === 0 ? p1 : p2;
+        versusHud.setLabels(
+          p1,
+          p2,
+          youAreHost
+            ? `Tap to shoot · You are ${you} (host)`
+            : `Tap to shoot · You are ${you}`,
+        );
+        activeMode = 'versus';
+        skinsShop.hide();
+        leaderboard.hide();
+        nicknameGate.hide();
+        gameOverModal.hide();
+        game.returnToMenu();
+        versusResultModal.hide();
+        versusHud.show();
+        mainMenu.hide();
+        setMenuFxVisible(false);
+      },
+      onMatchEnd: (result) => showOnlineResult(result),
+    });
+
+    mp.setHandlers({
+      onMessage: (message) => {
+        onlineSession?.bindMessage(message);
+      },
+      onClose: () => {
+        if (!onlineSession?.active) return;
+        const yourSlot = onlineSession.yourSlot;
+        const scoreP1 = versusGame.scoreP1;
+        const scoreP2 = versusGame.scoreP2;
+        onlineSession.dispose();
+        versusGame.markMatchOver();
+        showOnlineResult({
+          scoreP1,
+          scoreP2,
+          winner: yourSlot === 0 ? 'p2' : 'p1',
+          durationSec: 120,
+          reason: 'forfeit',
+        });
+      },
+      onError: () => {},
+    });
+
+    if (initial) {
+      onlineSession.bindMessage(initial);
+    }
+  }
 
   if (DEBUG) {
     (window as unknown as { __game: Game; __versus: VersusGame }).__game = game;
@@ -253,6 +361,8 @@ async function main(): Promise<void> {
 
   function startRun(): void {
     activeMode = 'solo';
+    cleanupOnline();
+    versusKind = 'local';
     skinsShop.hide();
     leaderboard.hide();
     nicknameGate.hide();
@@ -267,6 +377,10 @@ async function main(): Promise<void> {
   }
 
   function startVersusRun(): void {
+    cleanupOnline();
+    versusKind = 'local';
+    onlineLabels = { p1: 'P1', p2: 'P2' };
+    versusHud.setLabels('P1', 'P2', 'Left tap = P1 · Right tap = P2');
     activeMode = 'versus';
     skinsShop.hide();
     leaderboard.hide();
@@ -282,6 +396,8 @@ async function main(): Promise<void> {
 
   function goToMainMenu(): void {
     activeMode = 'menu';
+    cleanupOnline();
+    versusKind = 'local';
     game.returnToMenu();
     versusGame.returnToMenu();
     gameOverModal.hide();
@@ -302,10 +418,14 @@ async function main(): Promise<void> {
 
     if (activeMode === 'versus') {
       if (versusGame.phase === GamePhase.GameOver || versusGame.phase === GamePhase.Menu) return;
+      sfx.unlock();
+      if (onlineSession?.active) {
+        onlineSession.handleLocalTap();
+        return;
+      }
       const rect = canvas.getBoundingClientRect();
       const xNorm = (e.clientX - rect.left) / Math.max(1, rect.width);
       const player: VersusPlayerId = xNorm < 0.5 ? 0 : 1;
-      sfx.unlock();
       versusGame.handleTap(player);
       return;
     }
@@ -315,11 +435,18 @@ async function main(): Promise<void> {
     game.handleTap();
   });
 
-  // Keyboard helpers for local versus on desktop (A/W = P1, arrows = P2).
+  // Keyboard helpers for versus on desktop.
   window.addEventListener('keydown', (e) => {
     if (activeMode !== 'versus') return;
     if (versusGame.phase === GamePhase.GameOver || versusGame.phase === GamePhase.Menu) return;
     const key = e.key.toLowerCase();
+    if (onlineSession?.active) {
+      if (key === ' ' || key === 'w' || key === 'arrowup') {
+        e.preventDefault();
+        onlineSession.handleLocalTap();
+      }
+      return;
+    }
     if (key === 'a' || key === 'w') {
       e.preventDefault();
       versusGame.handleTap(0);
@@ -365,12 +492,17 @@ async function main(): Promise<void> {
 
     if (activeMode === 'versus') {
       versusGame.captureRenderPrev();
-      physicsAcc = stepFixed(
-        physicsAcc,
-        dt,
-        (fixedDt) => versusGame.update(fixedDt),
-        maxPhysicsStepsForQuality(quality),
-      );
+      const simulate = !onlineSession?.active || onlineSession.youAreHost;
+      if (simulate) {
+        physicsAcc = stepFixed(
+          physicsAcc,
+          dt,
+          (fixedDt) => versusGame.update(fixedDt),
+          maxPhysicsStepsForQuality(quality),
+        );
+      } else {
+        physicsAcc = 0;
+      }
       const alpha = Math.max(0, Math.min(1, physicsAcc / FIXED_DT));
       const b0 = versusGame.getDisplayBall(0, alpha);
       const b1 = versusGame.getDisplayBall(1, alpha);

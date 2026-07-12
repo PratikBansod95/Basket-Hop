@@ -111,6 +111,11 @@ async function handleMessage(ws: WebSocket, raw: string): Promise<void> {
       matchMaker.dequeue(session);
       matchMaker.leaveRoom(session);
       break;
+    case 'tap':
+    case 'snapshot':
+    case 'match_end':
+      matchMaker.handleMatchMessage(session, message);
+      break;
     default:
       matchMaker.send(ws, {
         type: 'error',

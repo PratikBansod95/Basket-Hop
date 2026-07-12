@@ -3,6 +3,8 @@ export class VersusHud {
   private timerEl: HTMLElement;
   private p1El: HTMLElement;
   private p2El: HTMLElement;
+  private p1Tag: HTMLElement;
+  private p2Tag: HTMLElement;
   private hintEl: HTMLElement;
   private lastTimer = '';
   private lastP1 = -1;
@@ -14,12 +16,12 @@ export class VersusHud {
       <div class="versus-hud">
         <div class="versus-hud-scores">
           <div class="versus-hud-player versus-hud-player--p1">
-            <span class="versus-hud-tag">P1</span>
+            <span class="versus-hud-tag" id="versus-tag-p1">P1</span>
             <span class="versus-hud-score" id="versus-score-p1">0</span>
           </div>
           <div class="versus-hud-timer" id="versus-timer">2:00</div>
           <div class="versus-hud-player versus-hud-player--p2">
-            <span class="versus-hud-tag">P2</span>
+            <span class="versus-hud-tag" id="versus-tag-p2">P2</span>
             <span class="versus-hud-score" id="versus-score-p2">0</span>
           </div>
         </div>
@@ -29,6 +31,8 @@ export class VersusHud {
     this.timerEl = this.root.querySelector('#versus-timer')!;
     this.p1El = this.root.querySelector('#versus-score-p1')!;
     this.p2El = this.root.querySelector('#versus-score-p2')!;
+    this.p1Tag = this.root.querySelector('#versus-tag-p1')!;
+    this.p2Tag = this.root.querySelector('#versus-tag-p2')!;
     this.hintEl = this.root.querySelector('#versus-hint')!;
     this.hide();
   }
@@ -39,6 +43,12 @@ export class VersusHud {
 
   hide(): void {
     this.root.classList.add('hidden');
+  }
+
+  setLabels(p1: string, p2: string, hint: string): void {
+    this.p1Tag.textContent = p1;
+    this.p2Tag.textContent = p2;
+    this.hintEl.textContent = hint;
   }
 
   update(scoreP1: number, scoreP2: number, timeLeft: number, phase: string, anyLaunched: boolean): void {
