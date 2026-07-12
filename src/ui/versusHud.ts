@@ -6,9 +6,11 @@ export class VersusHud {
   private p1Tag: HTMLElement;
   private p2Tag: HTMLElement;
   private hintEl: HTMLElement;
+  private pingEl: HTMLElement;
   private lastTimer = '';
   private lastP1 = -1;
   private lastP2 = -1;
+  private lastPing = -1;
 
   constructor(rootId = 'versus-hud') {
     this.root = document.getElementById(rootId)!;
@@ -19,7 +21,10 @@ export class VersusHud {
             <span class="versus-hud-tag" id="versus-tag-p1">P1</span>
             <span class="versus-hud-score" id="versus-score-p1">0</span>
           </div>
-          <div class="versus-hud-timer" id="versus-timer">2:00</div>
+          <div class="versus-hud-center">
+            <div class="versus-hud-timer" id="versus-timer">2:00</div>
+            <div class="versus-hud-ping hidden" id="versus-ping"></div>
+          </div>
           <div class="versus-hud-player versus-hud-player--p2">
             <span class="versus-hud-tag" id="versus-tag-p2">P2</span>
             <span class="versus-hud-score" id="versus-score-p2">0</span>
@@ -34,6 +39,7 @@ export class VersusHud {
     this.p1Tag = this.root.querySelector('#versus-tag-p1')!;
     this.p2Tag = this.root.querySelector('#versus-tag-p2')!;
     this.hintEl = this.root.querySelector('#versus-hint')!;
+    this.pingEl = this.root.querySelector('#versus-ping')!;
     this.hide();
   }
 
@@ -49,6 +55,20 @@ export class VersusHud {
     this.p1Tag.textContent = p1;
     this.p2Tag.textContent = p2;
     this.hintEl.textContent = hint;
+  }
+
+  setPing(rttMs: number | null): void {
+    if (rttMs === null || !Number.isFinite(rttMs)) {
+      this.pingEl.classList.add('hidden');
+      this.lastPing = -1;
+      return;
+    }
+    const ms = Math.round(rttMs);
+    if (ms === this.lastPing) return;
+    this.lastPing = ms;
+    this.pingEl.textContent = `${ms} ms`;
+    this.pingEl.classList.remove('hidden');
+    this.pingEl.classList.toggle('is-high', ms >= 120);
   }
 
   update(scoreP1: number, scoreP2: number, timeLeft: number, phase: string, anyLaunched: boolean): void {

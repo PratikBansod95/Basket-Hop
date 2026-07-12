@@ -252,7 +252,14 @@ export class MatchMaker {
       // Relay guest taps to host; host applies locally (no echo).
       if (session.playerId === room.hostPlayerId) return;
       const host = this.byPlayerId.get(room.hostPlayerId);
-      if (host) this.send(host.ws, { type: 'tap', slot: message.slot });
+      if (host) {
+        this.send(host.ws, {
+          type: 'tap',
+          slot: message.slot,
+          seq: Number(message.seq) || 0,
+          clientTime: Number(message.clientTime) || 0,
+        });
+      }
       return;
     }
 

@@ -496,6 +496,7 @@ async function main(): Promise<void> {
     const quality = getRenderQuality();
 
     if (activeMode === 'versus') {
+      onlineSession?.sampleRemoteState(now);
       versusGame.captureRenderPrev();
       physicsAcc = stepFixed(
         physicsAcc,
@@ -527,6 +528,11 @@ async function main(): Promise<void> {
         versusGame.phase,
         versusGame.balls[0].hasLaunched || versusGame.balls[1].hasLaunched,
       );
+      if (onlineSession?.active) {
+        versusHud.setPing(onlineSession.getRttMs());
+      } else {
+        versusHud.setPing(null);
+      }
 
       if (versusGame.phase === GamePhase.Menu) {
         ctx.fillStyle = '#0a0e14';

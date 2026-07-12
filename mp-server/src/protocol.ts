@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
 
-export const MP_PROTOCOL_VERSION = 2;
+export const MP_PROTOCOL_VERSION = 3;
 export const MATCH_COUNTDOWN_SEC = 3;
 
 export interface MpPlayerInfo {
@@ -37,6 +37,7 @@ export interface MpHoopSnap {
 
 export interface MpMatchSnapshot {
   seq: number;
+  serverTime: number;
   timeLeft: number;
   scoreP1: number;
   scoreP2: number;
@@ -56,13 +57,13 @@ export interface MpMatchResult {
 
 export type MpClientMessage =
   | { type: 'hello'; protocol: number; playerId: string }
-  | { type: 'heartbeat' }
+  | { type: 'heartbeat'; clientTime: number }
   | { type: 'queue' }
   | { type: 'queue_cancel' }
   | { type: 'create_room' }
   | { type: 'join_room'; code: string }
   | { type: 'leave_room' }
-  | { type: 'tap'; slot: 0 | 1 }
+  | { type: 'tap'; slot: 0 | 1; seq: number; clientTime: number }
   | { type: 'snapshot'; state: MpMatchSnapshot }
   | { type: 'match_end'; result: MpMatchResult };
 
@@ -81,7 +82,7 @@ export type MpServerMessage =
     }
   | { type: 'room_left' }
   | { type: 'peer_left'; playerId: string; nickname: string }
-  | { type: 'pong' }
+  | { type: 'pong'; clientTime: number }
   | { type: 'match_countdown'; seconds: number; players: MpPlayerInfo[] }
   | {
       type: 'match_start';
@@ -90,7 +91,7 @@ export type MpServerMessage =
       youAreHost: boolean;
       players: MpPlayerInfo[];
     }
-  | { type: 'tap'; slot: 0 | 1 }
+  | { type: 'tap'; slot: 0 | 1; seq: number; clientTime: number }
   | { type: 'snapshot'; state: MpMatchSnapshot }
   | { type: 'match_end'; result: MpMatchResult };
 

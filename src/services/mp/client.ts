@@ -33,6 +33,8 @@ export class MpClient {
   private ws: WebSocket | null = null;
   private heartbeatTimer: number | null = null;
   private playerId = '';
+  private rttMs = 80;
+  private rttSamples = 0;
 
   constructor(private handlers: MpClientHandlers) {}
 
@@ -45,9 +47,16 @@ export class MpClient {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 
+  /** Smoothed round-trip time in milliseconds. */
+  getRttMs(): number {
+    return this.rttMs;
+  }
+
   connect(playerId: string): void {
     this.disconnect();
     this.playerId = playerId;
+    this.rttMs = 80;
+    this.rttSamples = 0;
     const url = getMpWsUrl();
     if (!url) {
       this.handlers.onError?.(
@@ -76,6 +85,9 @@ export class MpClient {
     this.ws.addEventListener('message', (event) => {
       try {
         const message = JSON.parse(String(event.data)) as MpServerMessage;
+        if (message.type === 'pong') {
+          this.notePong(message.clientTime);
+        }
         this.handlers.onMessage(message);
       } catch {
         // ignore malformed
@@ -109,11 +121,25 @@ export class MpClient {
     this.ws.send(JSON.stringify(message));
   }
 
+  private notePong(clientTime: number): void {
+    if (!Number.isFinite(clientTime) || clientTime <= 0) return;
+    const sample = Math.max(1, performance.now() - clientTime);
+    this.rttSamples += 1;
+    if (this.rttSamples === 1) {
+      this.rttMs = sample;
+      return;
+    }
+    // EMA — responsive but stable.
+    this.rttMs = this.rttMs * 0.7 + sample * 0.3;
+  }
+
   private startHeartbeat(): void {
     this.stopHeartbeat();
-    this.heartbeatTimer = window.setInterval(() => {
-      this.send({ type: 'heartbeat' });
-    }, 15_000);
+    const beat = () => {
+      this.send({ type: 'heartbeat', clientTime: performance.now() });
+    };
+    beat();
+    this.heartbeatTimer = window.setInterval(beat, 2_000);
   }
 
   private stopHeartbeat(): void {

@@ -89,13 +89,25 @@ export class VersusGame {
   private bounceCooldown = 0;
   private clearBelowY = [0, 0];
   private ended = false;
-  /** Guest online mode: simulate motion only; host snapshots own scores/timer/hoop. */
-  networkPuppet = false;
+  /**
+   * `authority` = host / local full sim.
+   * `puppet` = guest: predict own ball only; world from snaps.
+   */
+  networkMode: 'authority' | 'puppet' = 'authority';
+  puppetOwnSlot: VersusPlayerId = 0;
 
   constructor(
     private launchMechanic: LaunchMechanic,
     private callbacks: VersusCallbacks,
   ) {}
+
+  /** @deprecated use networkMode */
+  get networkPuppet(): boolean {
+    return this.networkMode === 'puppet';
+  }
+  set networkPuppet(value: boolean) {
+    this.networkMode = value ? 'puppet' : 'authority';
+  }
 
   set paused(value: boolean) {
     this.platformPaused = value;
@@ -108,7 +120,8 @@ export class VersusGame {
   reset(): void {
     this.phase = GamePhase.Idle;
     this.ended = false;
-    this.networkPuppet = false;
+    this.networkMode = 'authority';
+    this.puppetOwnSlot = 0;
     this.hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
     this.balls = [
       createVersusBall(VERSUS_P1_SPAWN_X),
@@ -135,7 +148,7 @@ export class VersusGame {
   returnToMenu(): void {
     this.phase = GamePhase.Menu;
     this.ended = false;
-    this.networkPuppet = false;
+    this.networkMode = 'authority';
   }
 
   captureRenderPrev(): void {
@@ -187,11 +200,12 @@ export class VersusGame {
     return this.shake;
   }
 
-  exportSnapshot(seq: number): import('../../shared/contracts/mp').MpMatchSnapshot {
+  exportSnapshot(seq: number, serverTime = performance.now()): import('../../shared/contracts/mp').MpMatchSnapshot {
     const r1 = (n: number) => Math.round(n * 10) / 10;
     const r2 = (n: number) => Math.round(n * 100) / 100;
     return {
       seq,
+      serverTime,
       timeLeft: r2(this.timeLeft),
       scoreP1: this.scoreP1,
       scoreP2: this.scoreP2,
@@ -239,6 +253,24 @@ export class VersusGame {
   }
 
   applySnapshot(state: import('../../shared/contracts/mp').MpMatchSnapshot): void {
+    this.applySnapshotVisual(state, { ownSlot: null, mode: 'world' });
+    // Full overwrite both balls (local tooling / hard reset).
+    this.writeBallFromSnap(0, state.balls[0]);
+    this.writeBallFromSnap(1, state.balls[1]);
+  }
+
+  /**
+   * Apply a (possibly interpolated) snapshot.
+   * - `mode: 'world'`: update scores/hoop/opponent; leave `ownSlot` untouched for prediction.
+   * - `mode: 'reconcile'`: also blend/correct `ownSlot` against authority.
+   */
+  applySnapshotVisual(
+    state: import('../../shared/contracts/mp').MpMatchSnapshot,
+    opts: {
+      ownSlot: VersusPlayerId | null;
+      mode: 'world' | 'reconcile';
+    },
+  ): void {
     this.phase = GamePhase.Playing;
     this.timeLeft = state.timeLeft;
     this.scoreP1 = state.scoreP1;
@@ -247,22 +279,69 @@ export class VersusGame {
     this.targetClimbOffset = state.targetClimbOffset;
     this.climbAnimating = state.climbAnimating;
     Object.assign(this.hoop, state.hoop);
+
     for (let i = 0; i < 2; i += 1) {
-      const ball = this.balls[i];
-      const snap = state.balls[i];
-      ball.x = snap.x;
-      ball.y = snap.y;
-      ball.vx = snap.vx;
-      ball.vy = snap.vy;
-      ball.rotation = snap.rotation;
-      ball.hasLaunched = snap.hasLaunched;
-      ball.fallingThrough = snap.fallingThrough;
-      ball.scoredThisShot = snap.scoredThisShot;
-      ball.hitRimThisShot = snap.hitRimThisShot;
-      ball.frameStartX = snap.x;
-      ball.frameStartY = snap.y;
-      ball.frameStartVelY = snap.vy;
+      const snap = state.balls[i]!;
+      if (opts.ownSlot !== null && i === opts.ownSlot) {
+        if (opts.mode === 'reconcile') {
+          this.reconcileOwnBall(i as VersusPlayerId, snap, true);
+        }
+        continue;
+      }
+      this.writeBallFromSnap(i as VersusPlayerId, snap);
     }
+  }
+
+  private writeBallFromSnap(
+    index: VersusPlayerId,
+    snap: import('../../shared/contracts/mp').MpBallSnap,
+  ): void {
+    const ball = this.balls[index];
+    ball.x = snap.x;
+    ball.y = snap.y;
+    ball.vx = snap.vx;
+    ball.vy = snap.vy;
+    ball.rotation = snap.rotation;
+    ball.hasLaunched = snap.hasLaunched;
+    ball.fallingThrough = snap.fallingThrough;
+    ball.scoredThisShot = snap.scoredThisShot;
+    ball.hitRimThisShot = snap.hitRimThisShot;
+    ball.frameStartX = snap.x;
+    ball.frameStartY = snap.y;
+    ball.frameStartVelY = snap.vy;
+  }
+
+  private reconcileOwnBall(
+    index: VersusPlayerId,
+    snap: import('../../shared/contracts/mp').MpBallSnap,
+    blend: boolean,
+  ): void {
+    const ball = this.balls[index];
+    const err = Math.hypot(ball.x - snap.x, ball.y - snap.y);
+    const HARD_ERR = 48;
+    const BLEND_ERR = 12;
+
+    if (!blend || err > HARD_ERR) {
+      this.writeBallFromSnap(index, snap);
+      return;
+    }
+
+    if (err > BLEND_ERR) {
+      const t = 0.35;
+      ball.x += (snap.x - ball.x) * t;
+      ball.y += (snap.y - ball.y) * t;
+      ball.vx += (snap.vx - ball.vx) * t;
+      ball.vy += (snap.vy - ball.vy) * t;
+      ball.rotation += (snap.rotation - ball.rotation) * t;
+    }
+
+    ball.hasLaunched = snap.hasLaunched || ball.hasLaunched;
+    ball.fallingThrough = snap.fallingThrough;
+    ball.scoredThisShot = snap.scoredThisShot;
+    ball.hitRimThisShot = snap.hitRimThisShot;
+    ball.frameStartX = ball.x;
+    ball.frameStartY = ball.y;
+    ball.frameStartVelY = ball.vy;
   }
 
   handleTap(player: VersusPlayerId): void {
@@ -389,10 +468,15 @@ export class VersusGame {
 
     if (this.phase === GamePhase.Menu) return;
 
+    if (this.networkMode === 'puppet') {
+      this.updatePuppet(dt);
+      return;
+    }
+
     this.updateClimb(dt);
 
     if (this.phase === GamePhase.Playing || this.phase === GamePhase.Idle) {
-      if (!this.networkPuppet && this.phase === GamePhase.Playing) {
+      if (this.phase === GamePhase.Playing) {
         this.timeLeft = Math.max(0, this.timeLeft - dt);
         if (this.timeLeft <= 0) {
           this.finishMatch();
@@ -440,22 +524,19 @@ export class VersusGame {
       }
       this.bounceCooldown -= dt;
 
-      if (!this.networkPuppet) {
-        // Score check — gather first so simultaneous baskets share one climb/flip.
-        const scored: Array<{ player: VersusPlayerId; isSwish: boolean }> = [];
-        for (let i = 0; i < 2; i += 1) {
-          const result = checkScore(this.balls[i], this.hoop);
-          if (result) scored.push({ player: i as VersusPlayerId, isSwish: result.isSwish });
+      const scored: Array<{ player: VersusPlayerId; isSwish: boolean }> = [];
+      for (let i = 0; i < 2; i += 1) {
+        const result = checkScore(this.balls[i], this.hoop);
+        if (result) scored.push({ player: i as VersusPlayerId, isSwish: result.isSwish });
+      }
+      if (scored.length > 0) {
+        for (const hit of scored) {
+          this.applyPlayerScore(hit.player, hit.isSwish);
         }
-        if (scored.length > 0) {
-          for (const hit of scored) {
-            this.applyPlayerScore(hit.player, hit.isSwish);
-          }
-          this.advanceSharedCourt(
-            scored[scored.length - 1]!.isSwish,
-            this.balls[scored[scored.length - 1]!.player],
-          );
-        }
+        this.advanceSharedCourt(
+          scored[scored.length - 1]!.isSwish,
+          this.balls[scored[scored.length - 1]!.player],
+        );
       }
 
       for (let i = 0; i < 2; i += 1) {
@@ -466,6 +547,48 @@ export class VersusGame {
       }
     }
 
+    this.updateFx(dt);
+  }
+
+  /** Guest: predict own ball only; world/opponent come from snapshot buffer. */
+  private updatePuppet(dt: number): void {
+    if (this.phase !== GamePhase.Playing && this.phase !== GamePhase.Idle) {
+      this.updateFx(dt);
+      return;
+    }
+
+    const own = this.puppetOwnSlot;
+    const ball = this.balls[own];
+    let bounced = false;
+    integrateBall(
+      ball,
+      this.hoop,
+      this.colliders,
+      dt,
+      () => {
+        ball.hitRimThisShot = true;
+      },
+      () => {
+        bounced = true;
+      },
+      !ball.hasLaunched,
+    );
+    this.tryClearFallThrough(own);
+
+    updateHoop(this.hoop, dt);
+    updateHoopNet(this.hoop, ball, dt);
+    updateParticles(dt);
+
+    if (bounced && this.bounceCooldown <= 0) {
+      this.callbacks.onBounce();
+      this.bounceCooldown = 0.08;
+    }
+    this.bounceCooldown -= dt;
+
+    this.updateFx(dt);
+  }
+
+  private updateFx(dt: number): void {
     for (let i = this.floatingTexts.length - 1; i >= 0; i -= 1) {
       const ft = this.floatingTexts[i];
       ft.life -= dt;

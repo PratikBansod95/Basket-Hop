@@ -94,7 +94,10 @@ async function handleMessage(ws: WebSocket, raw: string): Promise<void> {
 
   switch (message.type) {
     case 'heartbeat':
-      matchMaker.send(ws, { type: 'pong' });
+      matchMaker.send(ws, {
+        type: 'pong',
+        clientTime: Number(message.clientTime) || 0,
+      });
       break;
     case 'queue':
       matchMaker.enqueue(session);
