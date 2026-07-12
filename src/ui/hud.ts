@@ -13,6 +13,10 @@ export class Hud {
   private staminaFillEl: HTMLElement;
   private staminaValueEl: HTMLElement;
   private lastScore = -1;
+  private lastCoins = -1;
+  private lastZoneTitle = '';
+  private lastZoneOpacity = -1;
+  private lastStaminaPct = -1;
 
   constructor(rootId = 'hud') {
     this.root = document.getElementById(rootId)!;
@@ -78,14 +82,25 @@ export class Hud {
       this.lastScore = stats.score;
     }
 
-    this.coinsEl.textContent = String(runCoins);
+    if (runCoins !== this.lastCoins) {
+      this.lastCoins = runCoins;
+      this.coinsEl.textContent = String(runCoins);
+    }
 
     const zoneOpacity = getZoneLabelOpacity(stats.level);
     if (zoneOpacity > 0.02) {
-      this.zoneLabelEl.textContent = getActiveZoneTitle(stats.level);
-      this.zoneLabelEl.style.opacity = String(zoneOpacity);
+      const title = getActiveZoneTitle(stats.level);
+      if (title !== this.lastZoneTitle) {
+        this.lastZoneTitle = title;
+        this.zoneLabelEl.textContent = title;
+      }
+      if (Math.abs(zoneOpacity - this.lastZoneOpacity) > 0.02) {
+        this.lastZoneOpacity = zoneOpacity;
+        this.zoneLabelEl.style.opacity = String(zoneOpacity);
+      }
       this.zoneLabelEl.classList.add('visible');
-    } else {
+    } else if (this.lastZoneOpacity !== 0) {
+      this.lastZoneOpacity = 0;
       this.zoneLabelEl.style.opacity = '0';
       this.zoneLabelEl.classList.remove('visible');
     }
@@ -105,14 +120,21 @@ export class Hud {
     this.staminaEl.classList.toggle('intro', showStamina && staminaIntroActive);
     if (stamina) {
       const ratio = Math.max(0, Math.min(1, stamina.current / stamina.max));
-      this.staminaFillEl.style.width = `${ratio * 100}%`;
-      this.staminaValueEl.textContent = `${Math.round(ratio * 100)}%`;
+      const pct = Math.round(ratio * 100);
+      if (pct !== this.lastStaminaPct) {
+        this.lastStaminaPct = pct;
+        this.staminaFillEl.style.width = `${pct}%`;
+        this.staminaValueEl.textContent = `${pct}%`;
+      }
       this.staminaEl.classList.toggle('low', ratio <= 0.35);
       this.staminaEl.classList.toggle('blocked', stamina.blockedFeedback > 0);
     } else {
       this.staminaEl.classList.remove('low', 'blocked', 'intro');
-      this.staminaFillEl.style.width = '100%';
-      this.staminaValueEl.textContent = '100%';
+      if (this.lastStaminaPct !== 100) {
+        this.lastStaminaPct = 100;
+        this.staminaFillEl.style.width = '100%';
+        this.staminaValueEl.textContent = '100%';
+      }
     }
 
     const showHint = !!tutorialPrompt || phase === 'idle' || (phase === 'playing' && !ballLaunched);

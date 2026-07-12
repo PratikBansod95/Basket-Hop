@@ -125,6 +125,43 @@ body {
   box-shadow: 0 0 0 1px rgba(255, 193, 77, 0.08), var(--shadow-lg);
 }
 
+#app.in-game #game-canvas {
+  box-shadow: none;
+}
+
+#app.in-game::before {
+  display: none;
+}
+
+/* In-game: strip expensive compositing so the canvas stays smooth on phones. */
+#app.in-game .hud-score-wrap,
+#app.in-game .coin-meter,
+#app.in-game .stamina-meter,
+#app.in-game .streak-badge,
+#app.in-game .hint-pill {
+  box-shadow: none;
+  animation: none;
+}
+
+#app.in-game .hud-score-wrap::before,
+#app.in-game .hud-score-wrap::after {
+  display: none;
+}
+
+#app.in-game .coin-meter-icon,
+#app.in-game .streak-icon,
+#app.in-game .stamina-fill {
+  box-shadow: none;
+}
+
+#app.in-game .stamina-meter.intro {
+  animation: none;
+}
+
+#app.in-game .stamina-fill {
+  transition: none;
+}
+
 #menu-fx-canvas {
   position: absolute;
   inset: 0;

@@ -24,6 +24,7 @@ import {
   getRenderQuality,
   maxPhysicsStepsForQuality,
   noteFrameTime,
+  onRenderQualityChange,
   shakeScaleForQuality,
 } from './game/renderQuality';
 
@@ -127,6 +128,11 @@ async function main(): Promise<void> {
   }
 
   bindStageResize(resize);
+  onRenderQualityChange(() => {
+    // Force DPR retarget when quality adapts mid-run.
+    lastLayout = null;
+    resize();
+  });
   resize();
   renderLoading(ctx);
   void preloadBackgroundAssets();
@@ -225,13 +231,13 @@ async function main(): Promise<void> {
     noteFrameTime(dtMs);
 
     const quality = getRenderQuality();
+    // Capture once per display frame — capturing inside each physics step
+    // made multi-step catch-up frames teleport the ball.
+    game.captureRenderPrev();
     physicsAcc = stepFixed(
       physicsAcc,
       dt,
-      (fixedDt) => {
-        game.captureRenderPrev();
-        game.update(fixedDt);
-      },
+      (fixedDt) => game.update(fixedDt),
       maxPhysicsStepsForQuality(quality),
     );
 

@@ -2,6 +2,7 @@ import {
   BALL_RADIUS,
   BALL_SPAWN_X,
   BALL_SPAWN_Y,
+  CANVAS_WIDTH,
   CLIMB_PER_BASKET,
   HOOP_CLEARANCE,
   INITIAL_CLIMB_OFFSET,
@@ -199,7 +200,7 @@ export class Game {
     this.syncRenderPrev();
   }
 
-  /** Call once before each fixed physics step. */
+  /** Call once per display frame before the physics while-loop. */
   captureRenderPrev(): void {
     this.prevBallX = this.ball.x;
     this.prevBallY = this.ball.y;
@@ -217,8 +218,13 @@ export class Game {
 
   getDisplayBall(alpha: number): { x: number; y: number; rotation: number } {
     const t = Math.max(0, Math.min(1, alpha));
+    let dx = this.ball.x - this.prevBallX;
+    // Screen-wrap: don't lerp across the court width.
+    if (Math.abs(dx) > CANVAS_WIDTH * 0.5) {
+      return { x: this.ball.x, y: this.ball.y, rotation: this.ball.rotation };
+    }
     return {
-      x: this.prevBallX + (this.ball.x - this.prevBallX) * t,
+      x: this.prevBallX + dx * t,
       y: this.prevBallY + (this.ball.y - this.prevBallY) * t,
       rotation: this.prevBallRot + (this.ball.rotation - this.prevBallRot) * t,
     };

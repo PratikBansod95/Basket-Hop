@@ -1,0 +1,19 @@
+---
+description: Always commit and push completed work to git without waiting for the user to ask
+alwaysApply: true
+---
+
+# Auto commit and push
+
+After finishing a task that changes project files, **always commit and push to `origin`** without waiting for the user to ask.
+
+Follow the existing git safety protocol:
+- Never update git config
+- Never force-push to main/master
+- Never use destructive git commands unless explicitly requested
+- Never commit secrets (`.env`, credentials, etc.)
+- Use a concise commit message focused on why
+- Stage only relevant files, then `git push -u origin HEAD`
+- If there is nothing to commit, skip the empty commit but still push if the branch is ahead
+
+Do this at the end of each completed change set in the same turn when practical.

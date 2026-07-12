@@ -2,7 +2,7 @@ import { DEFAULT_SKIN_ID } from '../shop/skins';
 import { getSkinImage } from '../shop/skinAssets';
 import { getSkinFx } from '../shop/skinFx';
 import { drawElementalBallFx } from './skinFxRenderer';
-import { fxStrengthForQuality, getRenderQuality, allowOverlayFx, allowOrbitFx } from './renderQuality';
+import { fxStrengthForQuality, getRenderQuality, allowAuraFx, allowOverlayFx, allowOrbitFx } from './renderQuality';
 
 function drawFallbackBall(ctx: CanvasRenderingContext2D, radius: number): void {
   const grad = ctx.createRadialGradient(-radius * 0.25, -radius * 0.25, radius * 0.1, 0, 0, radius);
@@ -62,7 +62,7 @@ export function drawBall(
   ctx.save();
   ctx.translate(x, y);
 
-  if (fx.kind !== 'none' && fxStrength > 0.05) {
+  if (fx.kind !== 'none' && fxStrength > 0.05 && allowAuraFx()) {
     drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'aura', strength: fxStrength });
   }
 
@@ -87,30 +87,32 @@ export function drawBall(
     drawFallbackBall(ctx, radius);
   }
 
-  // Overlay on medium+; orbit stays high-only (expensive radial blobs).
+  // Overlay/orbit are high-only (expensive radial blobs).
   if (fx.kind !== 'none' && fxStrength > 0.05 && allowOverlayFx()) {
     drawElementalBallFx(ctx, radius, skinId, time, {
       launched,
       phase: 'overlay',
-      strength: fxStrength * (getRenderQuality() === 'medium' ? 0.65 : 1),
+      strength: fxStrength,
     });
   }
 
-  const shineTop =
-    fx.kind === 'ice'
-      ? 'rgba(200,240,255,0.45)'
-      : fx.kind === 'neon'
-        ? 'rgba(180,255,220,0.4)'
-        : 'rgba(255,255,255,0.38)';
-  const shine = ctx.createRadialGradient(-radius * 0.35, -radius * 0.4, 0, 0, 0, radius);
-  shine.addColorStop(0, shineTop);
-  shine.addColorStop(0.35, 'rgba(255,255,255,0.08)');
-  shine.addColorStop(0.7, 'rgba(0,0,0,0)');
-  shine.addColorStop(1, 'rgba(0,0,0,0.18)');
-  ctx.beginPath();
-  ctx.arc(0, 0, radius * 0.98, 0, Math.PI * 2);
-  ctx.fillStyle = shine;
-  ctx.fill();
+  if (getRenderQuality() !== 'low') {
+    const shineTop =
+      fx.kind === 'ice'
+        ? 'rgba(200,240,255,0.45)'
+        : fx.kind === 'neon'
+          ? 'rgba(180,255,220,0.4)'
+          : 'rgba(255,255,255,0.38)';
+    const shine = ctx.createRadialGradient(-radius * 0.35, -radius * 0.4, 0, 0, 0, radius);
+    shine.addColorStop(0, shineTop);
+    shine.addColorStop(0.35, 'rgba(255,255,255,0.08)');
+    shine.addColorStop(0.7, 'rgba(0,0,0,0)');
+    shine.addColorStop(1, 'rgba(0,0,0,0.18)');
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.98, 0, Math.PI * 2);
+    ctx.fillStyle = shine;
+    ctx.fill();
+  }
 
   ctx.restore();
 

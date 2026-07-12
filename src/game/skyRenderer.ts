@@ -2,7 +2,7 @@ import { CANVAS_HEIGHT, CANVAS_WIDTH, altitudeClimbed } from './constants';
 import { backgroundAssets } from './assetLoader';
 import { getZoneImage } from './zoneAssets';
 import { getZoneAtLevel, getZoneBlend, type ClimbZone } from './zones';
-import { allowSkyAccents, getRenderQuality } from './renderQuality';
+import { allowSkyAccents, allowSkyCrossfade, getRenderQuality } from './renderQuality';
 
 const W = CANVAS_WIDTH;
 const H = CANVAS_HEIGHT;
@@ -41,31 +41,34 @@ export function drawSkyScreen(
   const toImg = getZoneImage(blend.to.id);
 
   if (fromImg || toImg) {
-    if (fromImg) {
-      drawCoverImage(ctx, fromImg, climbed, 1);
+    const useTo = blend.t >= 0.5 && blend.to.id !== blend.from.id;
+    const activeZone = useTo ? blend.to : blend.from;
+    const activeImg = useTo ? toImg : fromImg;
+
+    if (allowSkyCrossfade(quality) && blend.t > 0.01 && blend.t < 0.99 && blend.to.id !== blend.from.id) {
+      if (fromImg) drawCoverImage(ctx, fromImg, climbed, 1);
+      else drawZoneFallback(ctx, blend.from, 1);
+      if (toImg) {
+        ctx.save();
+        ctx.globalAlpha = blend.t;
+        drawCoverImage(ctx, toImg, climbed, 1);
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.globalAlpha = blend.t;
+        drawZoneFallback(ctx, blend.to, 1);
+        ctx.restore();
+      }
+    } else if (activeImg) {
+      drawCoverImage(ctx, activeImg, climbed, 1);
     } else {
-      drawZoneFallback(ctx, blend.from, 1);
+      drawZoneFallback(ctx, activeZone, 1);
     }
 
-    // Crossfade only when blend is meaningful — second full-screen blit is expensive.
-    const crossfadeMin = quality === 'high' ? 0.01 : 0.12;
-    if (blend.t > crossfadeMin && toImg && blend.to.id !== blend.from.id) {
-      ctx.save();
-      ctx.globalAlpha = blend.t;
-      drawCoverImage(ctx, toImg, climbed, 1);
-      ctx.restore();
-    } else if (blend.t > crossfadeMin && blend.to.id !== blend.from.id) {
-      ctx.save();
-      ctx.globalAlpha = blend.t;
-      drawZoneFallback(ctx, blend.to, 1);
-      ctx.restore();
-    }
-
-    const active = blend.t >= 0.5 ? blend.to : blend.from;
-    applyTint(ctx, blend.remixTint ?? active.tint);
+    applyTint(ctx, blend.remixTint ?? activeZone.tint);
     if (quality === 'high') drawVignette(ctx);
     if (allowSkyAccents(quality)) {
-      drawZoneAccents(ctx, active, time, climbed, blend.t >= 0.5 ? 1 : 1 - blend.t);
+      drawZoneAccents(ctx, activeZone, time, climbed, 1);
     }
     return;
   }

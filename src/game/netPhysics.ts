@@ -1,5 +1,6 @@
 import { buildNetLayout, ringPoint, type NetLayout, type NetPoint } from './netLayout';
 import { HOOP_GEOMETRY } from './palette';
+import { getRenderQuality } from './renderQuality';
 import type { Ball, Hoop } from './types';
 
 const le = HOOP_GEOMETRY;
@@ -8,7 +9,6 @@ const ROWS = 5;
 const GRAVITY = 420;
 const DAMPING = 0.98;
 const STIFF = 0.88;
-const ITERS = 3;
 const BALL_PUSH = 0.38;
 const BALL_PAD = 6;
 
@@ -35,7 +35,15 @@ interface NetSim {
 let sim: NetSim | null = null;
 
 function simKey(hoop: Hoop): string {
-  return `${hoop.side}:${Math.round(hoop.x)}:${Math.round(hoop.y)}`;
+  // Only rebuild when side changes — climb/slide must translate pins, not reset cloth.
+  return hoop.side;
+}
+
+function constraintIters(): number {
+  const q = getRenderQuality();
+  if (q === 'low') return 1;
+  if (q === 'medium') return 2;
+  return 3;
 }
 
 function idx(r: number, c: number): number {
@@ -158,7 +166,7 @@ export function updateHoopNet(hoop: Hoop, ball: Ball, dt: number): void {
     n.y += (dy / d) * push;
   }
 
-  for (let iter = 0; iter < ITERS; iter++) {
+  for (let iter = 0; iter < constraintIters(); iter++) {
     for (const c of s.constraints) {
       const a = s.nodes[c.a];
       const b = s.nodes[c.b];
