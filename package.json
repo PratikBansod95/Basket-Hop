@@ -9,6 +9,8 @@
     "build:ads": "tsc && vite build --mode ads && node scripts/build-ads-playable.mjs",
     "preview": "vite preview",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
+    "dev:mp": "npm --prefix mp-server run dev",
+    "build:mp": "npm --prefix mp-server run build",
     "test": "vitest run"
   },
   "dependencies": {

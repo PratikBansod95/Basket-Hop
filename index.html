@@ -121,8 +121,8 @@
           </button>
 
           <button class="menu-versus-cta" id="versus-btn" type="button">
-            <span class="menu-versus-label">Versus (local)</span>
-            <span class="menu-versus-sub">2 balls · 120s</span>
+            <span class="menu-versus-label">Versus</span>
+            <span class="menu-versus-sub">Online or local · 120s</span>
           </button>
         </div>
 
@@ -333,11 +333,35 @@
 
       <div id="game-over" class="hidden"></div>
 
+      <div id="versus-lobby" class="menu-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="versus-lobby-title">
+        <div class="menu-modal ui-panel versus-lobby-card">
+          <h2 class="menu-modal-title" id="versus-lobby-title">Versus</h2>
+          <p id="versus-lobby-status" class="versus-lobby-status">Pick a mode</p>
+
+          <div id="versus-lobby-actions" class="versus-lobby-actions">
+            <button class="ui-btn ui-btn-primary" id="versus-quick-btn" type="button">Quick match</button>
+            <button class="ui-btn" id="versus-create-btn" type="button">Create room code</button>
+            <div class="versus-join-row">
+              <input id="versus-join-code" class="versus-join-input" type="text" maxlength="6" placeholder="CODE" autocomplete="off" />
+              <button class="ui-btn" id="versus-join-btn" type="button">Join</button>
+            </div>
+            <button class="ui-btn" id="versus-local-btn" type="button">Play local (1 device)</button>
+          </div>
+
+          <div id="versus-lobby-room-panel" class="versus-lobby-room-panel hidden">
+            <pre id="versus-lobby-room" class="versus-lobby-room"></pre>
+            <button class="ui-btn" id="versus-leave-btn" type="button">Leave</button>
+          </div>
+
+          <button class="ui-btn" id="versus-lobby-close" type="button">Back</button>
+        </div>
+      </div>
+
       <div id="versus-result" class="menu-overlay hidden" aria-modal="true" role="dialog">
         <div class="menu-modal ui-panel versus-result-card">
           <h2 class="menu-modal-title" id="versus-result-title">P1 wins!</h2>
           <p class="versus-result-score" id="versus-result-score">0 – 0</p>
-          <p class="versus-result-note">Local versus — online matchmaking comes next.</p>
+          <p class="versus-result-note">Local versus — online match sync comes next.</p>
           <div class="versus-result-actions">
             <button class="ui-btn ui-btn-primary" id="versus-rematch-btn" type="button">Rematch</button>
             <button class="ui-btn" id="versus-menu-btn" type="button">Menu</button>

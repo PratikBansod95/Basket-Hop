@@ -445,3 +445,63 @@
   gap: 10px;
 }
 
+.versus-lobby-card {
+  width: min(92cqw, 400px);
+}
+
+.versus-lobby-status {
+  margin: 0 0 16px;
+  text-align: center;
+  color: var(--menu-navy-soft);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  min-height: 2.8em;
+}
+
+.versus-lobby-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.versus-join-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.versus-join-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(26, 43, 72, 0.14);
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--menu-navy);
+}
+
+.versus-lobby-room-panel {
+  margin-bottom: 12px;
+}
+
+.versus-lobby-room {
+  margin: 0 0 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(26, 43, 72, 0.06);
+  color: var(--menu-navy);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  text-align: center;
+}
+

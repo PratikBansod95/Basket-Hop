@@ -17,6 +17,7 @@ import { preloadSkinAssets } from './shop/skinAssets';
 import { GameOverModal } from './ui/gameOver';
 import { MainMenu } from './ui/mainMenu';
 import { Hud } from './ui/hud';
+import { VersusLobby } from './ui/versusLobby';
 import { VersusHud } from './ui/versusHud';
 import { VersusResultModal } from './ui/versusResult';
 import { renderMenuHomeFx } from './ui/menuHome3d';
@@ -111,6 +112,12 @@ async function main(): Promise<void> {
     () => goToMainMenu(),
   );
 
+  const versusLobby = new VersusLobby({
+    getSave: () => saveData,
+    onLocalVersus: () => requireNicknameThen(() => startVersusRun()),
+    onClose: () => {},
+  });
+
   const mainMenu = new MainMenu(
     () => {
       sfx.unlock();
@@ -132,7 +139,7 @@ async function main(): Promise<void> {
     },
     () => {
       sfx.unlock();
-      requireNicknameThen(() => startVersusRun());
+      requireNicknameThen(() => versusLobby.show());
     },
   );
 
@@ -291,7 +298,7 @@ async function main(): Promise<void> {
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     if (mainMenu.isVisible()) return;
-    if (nicknameGate.isOpen() || leaderboard.isOpen()) return;
+    if (nicknameGate.isOpen() || leaderboard.isOpen() || versusLobby.isOpen()) return;
 
     if (activeMode === 'versus') {
       if (versusGame.phase === GamePhase.GameOver || versusGame.phase === GamePhase.Menu) return;
