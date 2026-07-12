@@ -9,7 +9,6 @@ import { drawCoin } from './coinRenderer';
 import { drawHoopNet, drawHoopRim, drawHoopShadow } from './hoopRenderer';
 import type { Coin, FloatingText, Hoop } from './types';
 import { drawParticles } from './particles';
-import { getRenderQuality } from './renderQuality';
 
 export interface RenderBall {
   x: number;
@@ -63,7 +62,6 @@ export function render(
   colliders?: HoopColliders,
   skinId = 'classic',
 ): void {
-  const quality = getRenderQuality();
   const shakeAmt = state.shake;
   // Smooth-ish shake: time-based instead of Math.random() each paint (less micro-stutter).
   const shakeX =
@@ -84,7 +82,7 @@ export function render(
   drawHoopShadow(ctx, hoop, FLOOR_Y);
   drawCoins(ctx, coins, state.time);
   drawHoopNet(ctx, hoop);
-  if (quality !== 'low') drawParticles(ctx);
+  drawParticles(ctx);
   drawFloatingTexts(ctx, floatingTexts);
 
   const idleBob = ball.hasLaunched ? 0 : Math.sin(state.time * 2.8) * 5;
@@ -92,9 +90,7 @@ export function render(
 
   sampleBallTrail(ball.x, ballDrawY, ball.radius, ball.hasLaunched, state.time);
   drawBallTrail(ctx, skinId);
-  if (quality !== 'low') {
-    drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, FLOOR_Y);
-  }
+  drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, FLOOR_Y);
   drawBall(ctx, ball.x, ballDrawY, ball.radius, ball.rotation, skinId, state.time, ball.hasLaunched);
   drawHoopRim(ctx, hoop);
   if (colliders) drawDebugColliders(ctx, colliders);

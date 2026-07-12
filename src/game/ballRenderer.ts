@@ -3,7 +3,7 @@ import { getSkinImage } from '../shop/skinAssets';
 import { getSkinFx } from '../shop/skinFx';
 import { getSkinTrail, type SkinTrailStyle, type TrailMode } from '../shop/skinTrails';
 import { drawElementalBallFx } from './skinFxRenderer';
-import { fxStrengthForQuality, getRenderQuality, trailMaxForQuality } from './renderQuality';
+import { fxStrengthForQuality, getRenderQuality, trailMaxForQuality, allowOverlayFx, allowOrbitFx, allowTrailGlow } from './renderQuality';
 
 const trail: Array<{ x: number; y: number; r: number }> = [];
 let lastTrailSample = 0;
@@ -105,7 +105,7 @@ function drawTrailGhost(
   ctx.translate(x, y);
   ctx.globalAlpha = Math.min(1, (0.1 + fade * 0.28) * style.alpha);
 
-  if (style.glow && getRenderQuality() === 'high') {
+  if (style.glow && allowTrailGlow()) {
     ctx.shadowColor = color;
     ctx.shadowBlur = 12 + fade * 10;
   }
@@ -214,9 +214,13 @@ export function drawBall(
     drawFallbackBall(ctx, radius);
   }
 
-  // Overlay/orbit are expensive — high quality only.
-  if (fx.kind !== 'none' && fxStrength > 0.9) {
-    drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'overlay', strength: fxStrength });
+  // Overlay on medium+; orbit stays high-only (expensive radial blobs).
+  if (fx.kind !== 'none' && fxStrength > 0.05 && allowOverlayFx()) {
+    drawElementalBallFx(ctx, radius, skinId, time, {
+      launched,
+      phase: 'overlay',
+      strength: fxStrength * (getRenderQuality() === 'medium' ? 0.65 : 1),
+    });
   }
 
   const shineTop =
@@ -237,7 +241,7 @@ export function drawBall(
 
   ctx.restore();
 
-  if (fx.kind !== 'none' && fxStrength > 0.9) {
+  if (fx.kind !== 'none' && fxStrength > 0.05 && allowOrbitFx()) {
     drawElementalBallFx(ctx, radius, skinId, time, { launched, phase: 'orbit', strength: fxStrength });
   }
 

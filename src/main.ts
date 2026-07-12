@@ -238,6 +238,7 @@ async function main(): Promise<void> {
     const alpha = Math.max(0, Math.min(1, physicsAcc / FIXED_DT));
     const displayBall = game.getDisplayBall(alpha);
     const displayClimb = game.getDisplayClimbOffset(alpha);
+    const displayHoop = game.getDisplayHoop(alpha);
     const displayShake = game.getDisplayShake() * shakeScaleForQuality(quality);
 
     const inGame = game.phase !== GamePhase.Menu;
@@ -261,6 +262,8 @@ async function main(): Promise<void> {
       setMenuFxVisible(true);
     } else {
       setMenuFxVisible(false);
+      // Continuous display time for idle bob / trail sampling (avoids step-quantized FX).
+      const displayTime = game.time + physicsAcc;
       render(
         ctx,
         {
@@ -270,13 +273,13 @@ async function main(): Promise<void> {
           rotation: displayBall.rotation,
           hasLaunched: game.ball.hasLaunched,
         },
-        game.hoop,
+        displayHoop,
         game.coins,
         game.floatingTexts,
         {
           shake: displayShake,
           climbOffset: displayClimb,
-          time: game.time,
+          time: displayTime,
           level: game.stats.level,
         },
         DEBUG ? game.colliders : undefined,

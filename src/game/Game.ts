@@ -129,6 +129,9 @@ export class Game {
   prevBallY = 0;
   prevBallRot = 0;
   prevClimbOffset = INITIAL_CLIMB_OFFSET;
+  prevHoopX = 0;
+  prevHoopY = 0;
+  prevHoopTilt = 0;
   private shakeDuration = 0.18;
 
   private platformPaused = false;
@@ -204,6 +207,9 @@ export class Game {
     this.prevBallY = this.ball.y;
     this.prevBallRot = this.ball.rotation;
     this.prevClimbOffset = this.climbOffset;
+    this.prevHoopX = this.hoop.x;
+    this.prevHoopY = this.hoop.y;
+    this.prevHoopTilt = this.hoop.tilt;
   }
 
   /** Keep prev == current (menu / after reset / pause). */
@@ -223,6 +229,17 @@ export class Game {
   getDisplayClimbOffset(alpha: number): number {
     const t = Math.max(0, Math.min(1, alpha));
     return this.prevClimbOffset + (this.climbOffset - this.prevClimbOffset) * t;
+  }
+
+  /** Shallow display copy of the hoop (same alpha as ball/climb). */
+  getDisplayHoop(alpha: number): Hoop {
+    const t = Math.max(0, Math.min(1, alpha));
+    return {
+      ...this.hoop,
+      x: this.prevHoopX + (this.hoop.x - this.prevHoopX) * t,
+      y: this.prevHoopY + (this.hoop.y - this.prevHoopY) * t,
+      tilt: this.prevHoopTilt + (this.hoop.tilt - this.prevHoopTilt) * t,
+    };
   }
 
   getDisplayShake(): number {
@@ -505,10 +522,7 @@ export class Game {
         useFloor,
       );
       updateHoop(this.hoop, dt);
-      // Cloth net is expensive — half-rate on low quality phones.
-      if (getRenderQuality() !== 'low' || ((this.time * 60) | 0) % 2 === 0) {
-        updateHoopNet(this.hoop, this.ball, dt);
-      }
+      updateHoopNet(this.hoop, this.ball, dt);
       updateParticles(dt);
       this.tryClearFallThrough();
       this.collectCoins();

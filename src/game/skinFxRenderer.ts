@@ -65,16 +65,18 @@ export function drawSkinAura(
     ctx.globalCompositeOperation = 'lighter';
   }
 
-  // Outer bloom
-  const outer = radius * (1.75 + profile.auraPulse * 0.2) * pulse;
-  drawSoftBlob(ctx, 0, 0, outer, profile.auraColor, 0.28 * s);
+  // Outer bloom — skip on light/low strength to save fill-rate on phones.
+  if (s >= 0.55) {
+    const outer = radius * (1.75 + profile.auraPulse * 0.2) * pulse;
+    drawSoftBlob(ctx, 0, 0, outer, profile.auraColor, 0.28 * s);
+  }
 
   // Inner hot shell hugging the ball
   const inner = radius * 1.18 * pulse;
   drawSoftBlob(ctx, 0, 0, inner, profile.auraColor, 0.45 * s);
 
   // Tiny bright core wash (reads as “energy inside”)
-  if (profile.kind !== 'shadow') {
+  if (profile.kind !== 'shadow' && s >= 0.55) {
     drawSoftBlob(ctx, -radius * 0.15, -radius * 0.2, radius * 0.55, '#ffffff', 0.12 * s);
   }
 
