@@ -13,7 +13,7 @@ import { Game } from './Game';
 import { onBasket } from './hoop';
 import type { LaunchMechanic, TapContext } from './mechanics/LaunchMechanic';
 import { DefaultTapLaunch } from './mechanics/defaultTapLaunch';
-import { createTutorialState } from './tutorial';
+import { createStaminaIntroState, createTutorialState, STAMINA_TUTORIAL_PROMPT } from './tutorial';
 import { GamePhase } from './types';
 
 class TrackingLaunchMechanic implements LaunchMechanic {
@@ -35,7 +35,14 @@ class TrackingLaunchMechanic implements LaunchMechanic {
   reset(): void {}
 }
 
-function createGame(launchMechanic: LaunchMechanic = new DefaultTapLaunch()): Game {
+function createGame(
+  launchMechanic: LaunchMechanic = new DefaultTapLaunch(),
+  options: {
+    tutorialEnabled?: boolean;
+    staminaIntroEnabled?: boolean;
+    onStaminaTutorialComplete?: () => void;
+  } = {},
+): Game {
   return new Game(
     launchMechanic,
     {
@@ -44,8 +51,10 @@ function createGame(launchMechanic: LaunchMechanic = new DefaultTapLaunch()): Ga
       onTap: () => {},
       onBounce: () => {},
       onSwoosh: () => {},
+      onStaminaTutorialComplete: options.onStaminaTutorialComplete,
     },
-    createTutorialState(false),
+    createTutorialState(options.tutorialEnabled ?? false),
+    createStaminaIntroState(options.staminaIntroEnabled ?? false),
   );
 }
 
@@ -251,5 +260,113 @@ describe('stamina system', () => {
     (game as unknown as { restoreStaminaFromBasket: () => void }).restoreStaminaFromBasket();
 
     expect(game.stamina.current).toBe(20 + STAMINA_BASKET_RESTORE);
+  });
+});
+
+describe('stamina intro tutorial', () => {
+  it('does not pause before the fifth basket', () => {
+    const game = createGame(new DefaultTapLaunch(), { staminaIntroEnabled: true });
+    game.reset();
+    game.phase = GamePhase.Playing;
+    game.ball.hasLaunched = true;
+    game.stats.level = STAMINA_UNLOCK_BASKETS - 1;
+
+    game.update(0);
+
+    expect(game.stamina.active).toBe(false);
+    expect(game.pauseSource).toBe('none');
+    expect(game.tutorialPrompt).toBeNull();
+  });
+
+  it('pauses with the stamina prompt once unlocked and climb has settled', () => {
+    const game = createGame(new DefaultTapLaunch(), { staminaIntroEnabled: true });
+    game.reset();
+    game.phase = GamePhase.Playing;
+    game.ball.hasLaunched = true;
+    game.stats.level = STAMINA_UNLOCK_BASKETS;
+    game.climbAnimating = false;
+    game.hoop.animating = false;
+
+    game.update(0);
+
+    expect(game.stamina.active).toBe(true);
+    expect(game.pauseSource).toBe('staminaTutorial');
+    expect(game.tutorialPrompt).toBe(STAMINA_TUTORIAL_PROMPT);
+    expect(game.staminaIntroActive).toBe(true);
+  });
+
+  it('waits for climb to settle before pausing', () => {
+    const game = createGame(new DefaultTapLaunch(), { staminaIntroEnabled: true });
+    game.reset();
+    game.phase = GamePhase.Playing;
+    game.ball.hasLaunched = true;
+    game.stats.level = STAMINA_UNLOCK_BASKETS;
+    game.climbAnimating = true;
+    game.targetClimbOffset = game.climbOffset + CLIMB_PER_BASKET;
+    game.hoop.animating = false;
+
+    game.update(0);
+
+    expect(game.stamina.active).toBe(true);
+    expect(game.staminaIntro.pending).toBe(true);
+    expect(game.pauseSource).toBe('none');
+
+    game.climbOffset = game.targetClimbOffset;
+    game.climbAnimating = false;
+    game.update(0);
+
+    expect(game.pauseSource).toBe('staminaTutorial');
+  });
+
+  it('dismiss tap clears pause without steering or spending stamina', () => {
+    let completed = 0;
+    const mechanic = new TrackingLaunchMechanic();
+    const game = createGame(mechanic, {
+      staminaIntroEnabled: true,
+      onStaminaTutorialComplete: () => {
+        completed += 1;
+      },
+    });
+    game.reset();
+    game.stats.level = STAMINA_UNLOCK_BASKETS;
+    game.handleTap();
+    game.ball.vx = 120;
+    game.ball.vy = -80;
+    game.climbAnimating = false;
+    game.hoop.animating = false;
+
+    game.update(0);
+    expect(game.pauseSource).toBe('staminaTutorial');
+
+    const beforeVx = game.ball.vx;
+    const beforeVy = game.ball.vy;
+    const beforeStamina = game.stamina.current;
+
+    game.handleTap();
+
+    expect(game.pauseSource).toBe('none');
+    expect(game.tutorialPrompt).toBeNull();
+    expect(game.staminaIntro.enabled).toBe(false);
+    expect(game.ball.vx).toBe(beforeVx);
+    expect(game.ball.vy).toBe(beforeVy);
+    expect(game.stamina.current).toBe(beforeStamina);
+    expect(mechanic.tapCalls).toBe(0);
+    expect(completed).toBe(1);
+  });
+
+  it('skips the intro when stamina tutorial was already seen', () => {
+    const game = createGame(new DefaultTapLaunch(), { staminaIntroEnabled: false });
+    game.reset();
+    game.phase = GamePhase.Playing;
+    game.ball.hasLaunched = true;
+    game.stats.level = STAMINA_UNLOCK_BASKETS;
+    game.climbAnimating = false;
+    game.hoop.animating = false;
+
+    game.update(0);
+
+    expect(game.stamina.active).toBe(true);
+    expect(game.pauseSource).toBe('none');
+    expect(game.tutorialPrompt).toBeNull();
   });
 });

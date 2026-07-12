@@ -25,10 +25,12 @@ import { clearParticles, spawnBurst, updateParticles } from './particles';
 import { applyScore, checkScore } from './scoring';
 import { HOOP_GEOMETRY } from './palette';
 import {
+  createStaminaIntroState,
   createTutorialProbe,
   createTutorialState,
   getTutorialPrompt,
   shouldPauseForTutorial,
+  STAMINA_TUTORIAL_PROMPT,
 } from './tutorial';
 import {
   GamePhase,
@@ -38,6 +40,7 @@ import {
   type Hoop,
   type PauseSource,
   type RunStats,
+  type StaminaIntroState,
   type StaminaState,
   type TutorialState,
 } from './types';
@@ -53,6 +56,7 @@ export interface GameCallbacks {
   onTap(): void;
   onBounce(): void;
   onSwoosh(): void;
+  onStaminaTutorialComplete?(): void;
 }
 
 function createBall(): Ball {
@@ -111,6 +115,7 @@ export class Game {
   colliders = createColliders();
   stamina: StaminaState = createStaminaState();
   tutorial: TutorialState;
+  staminaIntro: StaminaIntroState;
 
   climbOffset = INITIAL_CLIMB_OFFSET;
   targetClimbOffset = INITIAL_CLIMB_OFFSET;
@@ -127,8 +132,10 @@ export class Game {
     private launchMechanic: LaunchMechanic,
     private callbacks: GameCallbacks,
     tutorialState: TutorialState = createTutorialState(false),
+    staminaIntroState: StaminaIntroState = createStaminaIntroState(false),
   ) {
     this.tutorial = tutorialState;
+    this.staminaIntro = staminaIntroState;
   }
 
   set paused(value: boolean) {
@@ -142,11 +149,16 @@ export class Game {
   get pauseSource(): PauseSource {
     if (this.platformPaused) return 'platform';
     if (this.tutorial.prompt) return 'tutorial';
+    if (this.staminaIntro.prompt) return 'staminaTutorial';
     return 'none';
   }
 
   get tutorialPrompt(): string | null {
-    return this.tutorial.prompt;
+    return this.tutorial.prompt ?? this.staminaIntro.prompt;
+  }
+
+  get staminaIntroActive(): boolean {
+    return this.staminaIntro.prompt !== null;
   }
 
   reset(): void {
@@ -182,6 +194,8 @@ export class Game {
   private resetTutorialRunState(): void {
     this.tutorial.prompt = null;
     this.tutorial.awaitingSuccess = false;
+    this.staminaIntro.pending = false;
+    this.staminaIntro.prompt = null;
   }
 
   private beginShotAttempt(): void {
@@ -223,6 +237,27 @@ export class Game {
   private unlockStaminaIfNeeded(): void {
     if (this.stamina.active || this.stats.level < STAMINA_UNLOCK_BASKETS) return;
     this.stamina.active = true;
+    if (this.staminaIntro.enabled && !this.staminaIntro.prompt) {
+      this.staminaIntro.pending = true;
+    }
+  }
+
+  private maybePauseForStaminaIntro(): void {
+    if (!this.staminaIntro.enabled || !this.staminaIntro.pending) return;
+    if (this.staminaIntro.prompt || this.tutorial.prompt) return;
+    if (!this.stamina.active) return;
+    if (this.climbAnimating || this.hoop.animating) return;
+    if (this.phase !== GamePhase.Playing && this.phase !== GamePhase.Idle) return;
+
+    this.staminaIntro.pending = false;
+    this.staminaIntro.prompt = STAMINA_TUTORIAL_PROMPT;
+  }
+
+  private resumeFromStaminaIntro(): void {
+    this.staminaIntro.prompt = null;
+    this.staminaIntro.pending = false;
+    this.staminaIntro.enabled = false;
+    this.callbacks.onStaminaTutorialComplete?.();
   }
 
   private spendStaminaForTap(): number | null {
@@ -294,6 +329,10 @@ export class Game {
 
   handleTap(): void {
     if (this.pauseSource === 'platform' || this.phase === GamePhase.GameOver || this.phase === GamePhase.Menu) return;
+    if (this.pauseSource === 'staminaTutorial') {
+      this.resumeFromStaminaIntro();
+      return;
+    }
     if (this.pauseSource === 'tutorial') {
       this.resumeFromTutorial();
     }
@@ -402,6 +441,8 @@ export class Game {
 
     this.updateStamina(dt);
     this.updateClimb(dt);
+    this.maybePauseForStaminaIntro();
+    if (this.paused) return;
 
     if (this.phase === GamePhase.Playing) {
       const useFloor = !this.ball.hasLaunched;

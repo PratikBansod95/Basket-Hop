@@ -7,7 +7,7 @@ export enum GamePhase {
   GameOver = 'gameover',
 }
 
-export type PauseSource = 'none' | 'platform' | 'tutorial';
+export type PauseSource = 'none' | 'platform' | 'tutorial' | 'staminaTutorial';
 
 export interface Vec2 {
   x: number;
@@ -79,6 +79,12 @@ export interface TutorialState {
   stepsCompleted: number;
   maxSteps: number;
   awaitingSuccess: boolean;
+  prompt: string | null;
+}
+
+export interface StaminaIntroState {
+  enabled: boolean;
+  pending: boolean;
   prompt: string | null;
 }
 

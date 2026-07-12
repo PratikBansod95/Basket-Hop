@@ -3,9 +3,11 @@ import { Game } from './Game';
 import { DefaultTapLaunch } from './mechanics/defaultTapLaunch';
 import { GamePhase } from './types';
 import {
+  createStaminaIntroState,
   createTutorialProbe,
   createTutorialState,
   shouldPauseForTutorial,
+  shouldRunStaminaTutorial,
   shouldRunTutorial,
   TUTORIAL_PROMPT_FIRST,
   TUTORIAL_PROMPT_SECOND,
@@ -78,6 +80,9 @@ describe('FTUE tutorial', () => {
       totalShots: 0,
       cleanShots: 0,
       tutorialSeen: false,
+      staminaTutorialSeen: false,
+      ownedSkins: ['classic'],
+      equippedSkin: 'classic',
     })).toBe(true);
 
     expect(shouldRunTutorial({
@@ -87,6 +92,9 @@ describe('FTUE tutorial', () => {
       totalShots: 0,
       cleanShots: 0,
       tutorialSeen: false,
+      staminaTutorialSeen: false,
+      ownedSkins: ['classic'],
+      equippedSkin: 'classic',
     })).toBe(true);
 
     expect(shouldRunTutorial({
@@ -96,6 +104,9 @@ describe('FTUE tutorial', () => {
       totalShots: 0,
       cleanShots: 0,
       tutorialSeen: false,
+      staminaTutorialSeen: false,
+      ownedSkins: ['classic'],
+      equippedSkin: 'classic',
     })).toBe(true);
 
     expect(shouldRunTutorial({
@@ -105,6 +116,9 @@ describe('FTUE tutorial', () => {
       totalShots: 0,
       cleanShots: 0,
       tutorialSeen: true,
+      staminaTutorialSeen: false,
+      ownedSkins: ['classic'],
+      equippedSkin: 'classic',
     })).toBe(true);
   });
 
@@ -165,5 +179,41 @@ describe('FTUE tutorial', () => {
 
     const paused = stepUntil(game, () => game.pauseSource === 'tutorial', 420);
     expect(paused).toBe(false);
+  });
+});
+
+describe('stamina tutorial gate', () => {
+  it('runs only when the save has not seen it', () => {
+    expect(shouldRunStaminaTutorial({
+      best: 0,
+      coins: 0,
+      totalGames: 0,
+      totalShots: 0,
+      cleanShots: 0,
+      tutorialSeen: false,
+      staminaTutorialSeen: false,
+      ownedSkins: ['classic'],
+      equippedSkin: 'classic',
+    })).toBe(true);
+
+    expect(shouldRunStaminaTutorial({
+      best: 12,
+      coins: 4,
+      totalGames: 3,
+      totalShots: 20,
+      cleanShots: 5,
+      tutorialSeen: true,
+      staminaTutorialSeen: true,
+      ownedSkins: ['classic'],
+      equippedSkin: 'classic',
+    })).toBe(false);
+  });
+
+  it('creates an idle intro state from the factory', () => {
+    expect(createStaminaIntroState(true)).toEqual({
+      enabled: true,
+      pending: false,
+      prompt: null,
+    });
   });
 });

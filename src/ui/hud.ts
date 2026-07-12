@@ -60,6 +60,7 @@ export class Hud {
     tutorialPrompt: string | null = null,
     stamina: StaminaState | null = null,
     runCoins = 0,
+    staminaIntroActive = false,
   ): void {
     const inGame = phase !== 'menu';
     this.root.style.display = inGame ? 'block' : 'none';
@@ -89,6 +90,7 @@ export class Hud {
 
     const showStamina = !!stamina?.active;
     this.staminaEl.classList.toggle('visible', showStamina);
+    this.staminaEl.classList.toggle('intro', showStamina && staminaIntroActive);
     if (stamina) {
       const ratio = Math.max(0, Math.min(1, stamina.current / stamina.max));
       this.staminaFillEl.style.width = `${ratio * 100}%`;
@@ -96,7 +98,7 @@ export class Hud {
       this.staminaEl.classList.toggle('low', ratio <= 0.35);
       this.staminaEl.classList.toggle('blocked', stamina.blockedFeedback > 0);
     } else {
-      this.staminaEl.classList.remove('low', 'blocked');
+      this.staminaEl.classList.remove('low', 'blocked', 'intro');
       this.staminaFillEl.style.width = '100%';
       this.staminaValueEl.textContent = '100%';
     }

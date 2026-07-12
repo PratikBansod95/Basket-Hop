@@ -10,7 +10,7 @@ import { createHoop, syncHoopToCamera, updateHoop } from './hoop';
 import type { LaunchMechanic } from './mechanics/LaunchMechanic';
 import { integrateBall } from './physics';
 import { checkScore } from './scoring';
-import { GamePhase, type Ball, type Hoop, type PauseSource, type RunStats, type TutorialState } from './types';
+import { GamePhase, type Ball, type Hoop, type PauseSource, type RunStats, type StaminaIntroState, type TutorialState } from './types';
 import type { SaveData } from '../platform/types';
 
 const TUTORIAL_SIM_DT = 1 / 60;
@@ -19,6 +19,7 @@ const TUTORIAL_SIM_STEPS = 150;
 export const TUTORIAL_PROMPT_FIRST = 'Tap again to move ball';
 export const TUTORIAL_PROMPT_SECOND = 'Keep tapping on screen to control the ball';
 export const TUTORIAL_MAX_STEPS = 2;
+export const STAMINA_TUTORIAL_PROMPT = 'Every Tap will Cost Stamina Now\nPlay Carefully';
 
 export interface TutorialProbeState {
   phase: GamePhase;
@@ -36,12 +37,24 @@ export function shouldRunTutorial(save: SaveData): boolean {
   return true;
 }
 
+export function shouldRunStaminaTutorial(save: SaveData): boolean {
+  return !save.staminaTutorialSeen;
+}
+
 export function createTutorialState(enabled: boolean): TutorialState {
   return {
     enabled,
     stepsCompleted: 0,
     maxSteps: TUTORIAL_MAX_STEPS,
     awaitingSuccess: false,
+    prompt: null,
+  };
+}
+
+export function createStaminaIntroState(enabled: boolean): StaminaIntroState {
+  return {
+    enabled,
+    pending: false,
     prompt: null,
   };
 }

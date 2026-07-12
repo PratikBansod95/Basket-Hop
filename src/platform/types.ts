@@ -7,6 +7,9 @@ export interface SaveData {
   totalShots: number;
   cleanShots: number;
   tutorialSeen: boolean;
+  staminaTutorialSeen: boolean;
+  ownedSkins: string[];
+  equippedSkin: string;
 }
 
 export const DEFAULT_SAVE: SaveData = {
@@ -16,12 +19,19 @@ export const DEFAULT_SAVE: SaveData = {
   totalShots: 0,
   cleanShots: 0,
   tutorialSeen: false,
+  staminaTutorialSeen: false,
+  ownedSkins: ['classic'],
+  equippedSkin: 'classic',
 };
 
 export function parseSaveData(raw: string | null): SaveData {
-  if (!raw) return { ...DEFAULT_SAVE };
+  if (!raw) return { ...DEFAULT_SAVE, ownedSkins: [...DEFAULT_SAVE.ownedSkins] };
   try {
     const data = JSON.parse(raw) as Partial<SaveData>;
+    const owned = Array.isArray(data.ownedSkins)
+      ? data.ownedSkins.filter((id): id is string => typeof id === 'string')
+      : ['classic'];
+    if (!owned.includes('classic')) owned.unshift('classic');
     return {
       best: data.best ?? 0,
       coins: data.coins ?? 0,
@@ -29,9 +39,12 @@ export function parseSaveData(raw: string | null): SaveData {
       totalShots: data.totalShots ?? 0,
       cleanShots: data.cleanShots ?? 0,
       tutorialSeen: data.tutorialSeen ?? false,
+      staminaTutorialSeen: data.staminaTutorialSeen ?? false,
+      ownedSkins: owned,
+      equippedSkin: typeof data.equippedSkin === 'string' ? data.equippedSkin : 'classic',
     };
   } catch {
-    return { ...DEFAULT_SAVE };
+    return { ...DEFAULT_SAVE, ownedSkins: [...DEFAULT_SAVE.ownedSkins] };
   }
 }
 

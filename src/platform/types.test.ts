@@ -16,7 +16,7 @@ function createStats(overrides: Partial<RunStats> = {}): RunStats {
 }
 
 describe('save data helpers', () => {
-  it('defaults coins when parsing older saves', () => {
+  it('defaults coins and stamina tutorial flag when parsing older saves', () => {
     const save = parseSaveData(JSON.stringify({ best: 7, totalGames: 3 }));
 
     expect(save).toEqual({
@@ -24,6 +24,7 @@ describe('save data helpers', () => {
       best: 7,
       totalGames: 3,
       coins: 0,
+      staminaTutorialSeen: false,
     });
   });
 

@@ -1,34 +1,24 @@
-import { COLORS } from './palette';
+import { DEFAULT_SKIN_ID } from '../shop/skins';
+import { getSkinImage } from '../shop/skinAssets';
 
-const EMOJI_SIZE = 256;
-let emojiCanvas: HTMLCanvasElement | null = null;
-let emojiReady = false;
-
-function getEmojiCanvas(): HTMLCanvasElement | null {
-  if (typeof document === 'undefined') return null;
-  if (!emojiCanvas) {
-    emojiCanvas = document.createElement('canvas');
-    emojiCanvas.width = EMOJI_SIZE;
-    emojiCanvas.height = EMOJI_SIZE;
-    const ctx = emojiCanvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.clearRect(0, 0, EMOJI_SIZE, EMOJI_SIZE);
-    ctx.font = '220px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🏀', EMOJI_SIZE / 2, EMOJI_SIZE / 2 + 8);
-    try {
-      const px = ctx.getImageData(EMOJI_SIZE / 2 + 18, EMOJI_SIZE / 2, 1, 1).data[3];
-      emojiReady = px > 8;
-    } catch {
-      emojiReady = true;
-    }
-  }
-  return emojiCanvas;
-}
-
-if (typeof document !== 'undefined' && document.fonts) {
-  void document.fonts.ready.then(() => getEmojiCanvas());
+function drawFallbackBall(ctx: CanvasRenderingContext2D, radius: number): void {
+  const grad = ctx.createRadialGradient(-radius * 0.25, -radius * 0.25, radius * 0.1, 0, 0, radius);
+  grad.addColorStop(0, '#f0a064');
+  grad.addColorStop(0.55, '#d4682a');
+  grad.addColorStop(1, '#6a2c0c');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.95, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#1b0e07';
+  ctx.lineWidth = Math.max(1.5, radius * 0.06);
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.82, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-radius * 0.75, 0);
+  ctx.lineTo(radius * 0.75, 0);
+  ctx.stroke();
 }
 
 export function drawBallShadow(
@@ -58,36 +48,22 @@ export function drawBall(
   y: number,
   radius: number,
   rotation: number,
+  skinId: string = DEFAULT_SKIN_ID,
 ): void {
-  const emoji = getEmojiCanvas();
+  const img = getSkinImage(skinId);
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rotation);
-  ctx.fillStyle = COLORS.ball;
-  ctx.beginPath();
-  ctx.arc(0, 0, radius * 0.95, 0, Math.PI * 2);
-  ctx.fill();
-  if (emoji && emojiReady) {
-    const size = radius * 2.4;
-    ctx.drawImage(emoji, -size / 2, -size / 2, size, size);
+
+  if (img && img.complete && img.naturalWidth > 0) {
+    const size = radius * 2.05;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 0.98, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
   } else {
-    const grad = ctx.createRadialGradient(-radius * 0.25, -radius * 0.25, radius * 0.1, 0, 0, radius);
-    grad.addColorStop(0, '#f0a064');
-    grad.addColorStop(0.55, '#d4682a');
-    grad.addColorStop(1, '#6a2c0c');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, 0, radius * 0.95, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#1b0e07';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, radius * 0.82, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-radius * 0.75, 0);
-    ctx.lineTo(radius * 0.75, 0);
-    ctx.stroke();
+    drawFallbackBall(ctx, radius);
   }
+
   ctx.restore();
 }

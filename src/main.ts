@@ -2,16 +2,20 @@ import { SfxEngine } from './audio/sfx';
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from './game/constants';
 import { DEBUG } from './game/debug';
 import { Game } from './game/Game';
-import { createTutorialState, shouldRunTutorial } from './game/tutorial';
+import { createStaminaIntroState, createTutorialState, shouldRunStaminaTutorial, shouldRunTutorial } from './game/tutorial';
 import { GamePhase } from './game/types';
 import { DefaultTapLaunch } from './game/mechanics/defaultTapLaunch';
 import { render, renderLoading } from './game/renderer';
 import { preloadBackgroundAssets } from './game/assetLoader';
 import { createPlatform } from './platform/youtube';
 import { mergeRunIntoSave, type SaveData } from './platform/types';
+import { normalizeSkinSave } from './shop/skinEconomy';
+import { preloadSkinAssets } from './shop/skinAssets';
 import { GameOverModal } from './ui/gameOver';
 import { MainMenu } from './ui/mainMenu';
 import { Hud } from './ui/hud';
+import { renderMenuHomeFx } from './ui/menuHome3d';
+import { SkinsShop } from './ui/skinsShop';
 import { bindStageResize, computeStageLayout, getViewportSize } from './ui/stageLayout';
 
 const launchMechanic = new DefaultTapLaunch();
@@ -20,12 +24,12 @@ async function main(): Promise<void> {
   const platform = createPlatform();
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
-  const menuBallCanvas = document.getElementById('menu-ball-canvas') as HTMLCanvasElement;
-  const menuBallCtx = menuBallCanvas.getContext('2d')!;
+  const menuFxCanvas = document.getElementById('menu-fx-canvas') as HTMLCanvasElement;
+  const menuFxCtx = menuFxCanvas.getContext('2d')!;
   const canvasStage = document.querySelector('.canvas-stage') as HTMLElement;
   const appRoot = document.getElementById('app')!;
 
-  let saveData: SaveData = await platform.loadSave();
+  let saveData: SaveData = normalizeSkinSave(await platform.loadSave());
   let userMuted = false;
   let platformAudio = platform.isAudioEnabled();
   const tutorialEnabled = shouldRunTutorial(saveData);
@@ -33,9 +37,11 @@ async function main(): Promise<void> {
     saveData = { ...saveData, tutorialSeen: true };
     void platform.saveSave(saveData);
   }
+  const staminaTutorialEnabled = shouldRunStaminaTutorial(saveData);
 
   const sfx = new SfxEngine();
   const hud = new Hud();
+  const skinsShop = new SkinsShop();
 
   function isMuted(): boolean {
     return userMuted || !platformAudio;
@@ -64,6 +70,13 @@ async function main(): Promise<void> {
       userMuted = !userMuted;
       syncAudio();
     },
+    () => {
+      skinsShop.show(saveData, (next) => {
+        saveData = next;
+        void platform.saveSave(saveData);
+        mainMenu.refreshWallet(saveData);
+      });
+    },
   );
 
   syncAudio();
@@ -82,24 +95,25 @@ async function main(): Promise<void> {
     canvasStage.style.width = `${layout.width}px`;
     canvasStage.style.height = `${layout.height}px`;
 
-    for (const c of [canvas, menuBallCanvas]) {
+    for (const c of [canvas, menuFxCanvas]) {
       c.width = CANVAS_WIDTH * layout.dpr;
       c.height = CANVAS_HEIGHT * layout.dpr;
       c.style.width = '100%';
       c.style.height = '100%';
     }
     ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
-    menuBallCtx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
+    menuFxCtx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
   }
 
-  function setMenuBallVisible(visible: boolean): void {
-    menuBallCanvas.classList.toggle('hidden', !visible);
+  function setMenuFxVisible(visible: boolean): void {
+    menuFxCanvas.classList.toggle('hidden', !visible);
   }
 
   bindStageResize(resize);
   resize();
   renderLoading(ctx);
   void preloadBackgroundAssets();
+  void preloadSkinAssets();
 
   const game = new Game(launchMechanic, {
     onTap: () => {
@@ -119,7 +133,11 @@ async function main(): Promise<void> {
       void platform.saveSave(saveData);
       gameOverModal.show(stats, saveData, game.runCoins);
     },
-  }, createTutorialState(tutorialEnabled));
+    onStaminaTutorialComplete: () => {
+      saveData = { ...saveData, staminaTutorialSeen: true };
+      void platform.saveSave(saveData);
+    },
+  }, createTutorialState(tutorialEnabled), createStaminaIntroState(staminaTutorialEnabled));
 
   if (DEBUG) {
     (window as unknown as { __game: Game }).__game = game;
@@ -137,20 +155,19 @@ async function main(): Promise<void> {
   });
 
   function startRun(): void {
+    skinsShop.hide();
     game.reset();
     gameOverModal.hide();
     mainMenu.hide();
-    mainMenu.hideHowTo();
-    setMenuBallVisible(false);
+    setMenuFxVisible(false);
   }
 
   function goToMainMenu(): void {
     game.returnToMenu();
     gameOverModal.hide();
-    mainMenu.hideHowTo();
-    mainMenu.show(saveData.best, saveData.coins);
+    mainMenu.show(saveData);
     mainMenu.setMuted(isMuted());
-    setMenuBallVisible(false);
+    setMenuFxVisible(true);
   }
 
   canvas.addEventListener('pointerdown', (e) => {
@@ -161,9 +178,10 @@ async function main(): Promise<void> {
     game.handleTap();
   });
 
-  mainMenu.show(saveData.best, saveData.coins);
+  mainMenu.show(saveData);
   mainMenu.setMuted(isMuted());
-  setMenuBallVisible(false);
+  setMenuFxVisible(true);
+  renderMenuHomeFx(menuFxCtx, 0, saveData.equippedSkin);
   ctx.fillStyle = '#0a0e14';
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   platform.firstFrameReady();
@@ -185,18 +203,36 @@ async function main(): Promise<void> {
     game.update(dt);
     const inGame = game.phase !== GamePhase.Menu;
     appRoot.classList.toggle('in-game', inGame);
-    hud.update(game.stats, game.phase, game.ball.hasLaunched, game.tutorialPrompt, game.stamina, game.runCoins);
+    hud.update(
+      game.stats,
+      game.phase,
+      game.ball.hasLaunched,
+      game.tutorialPrompt,
+      game.stamina,
+      game.runCoins,
+      game.staminaIntroActive,
+    );
     if (game.phase === GamePhase.Menu) {
       ctx.fillStyle = '#0a0e14';
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-      setMenuBallVisible(false);
+      renderMenuHomeFx(menuFxCtx, game.time, saveData.equippedSkin);
+      setMenuFxVisible(true);
     } else {
-      setMenuBallVisible(false);
-      render(ctx, game.ball, game.hoop, game.coins, game.floatingTexts, {
-        shake: game.shake,
-        climbOffset: game.climbOffset,
-        time: game.time,
-      }, DEBUG ? game.colliders : undefined);
+      setMenuFxVisible(false);
+      render(
+        ctx,
+        game.ball,
+        game.hoop,
+        game.coins,
+        game.floatingTexts,
+        {
+          shake: game.shake,
+          climbOffset: game.climbOffset,
+          time: game.time,
+        },
+        DEBUG ? game.colliders : undefined,
+        saveData.equippedSkin,
+      );
     }
   }
   requestAnimationFrame(loop);

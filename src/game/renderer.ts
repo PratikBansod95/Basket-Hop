@@ -101,6 +101,7 @@ export function render(
   floatingTexts: FloatingText[],
   state: RenderState,
   colliders?: HoopColliders,
+  skinId = 'classic',
 ): void {
   const shakeX = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
   const shakeY = state.shake > 0 ? (Math.random() - 0.5) * state.shake : 0;
@@ -123,7 +124,7 @@ export function render(
   const ballDrawY = ball.y + idleBob;
 
   drawBallShadow(ctx, ball.x, ballDrawY, ball.radius, FLOOR_Y);
-  drawBall(ctx, ball.x, ballDrawY, ball.radius, ball.rotation);
+  drawBall(ctx, ball.x, ballDrawY, ball.radius, ball.rotation, skinId);
   drawHoopRim(ctx, hoop);
   if (colliders) drawDebugColliders(ctx, colliders);
 
