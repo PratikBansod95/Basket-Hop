@@ -7,7 +7,8 @@ import type {
 } from '../../../shared/contracts/mp';
 import { VersusGame, type VersusPlayerId, type VersusResult } from '../../game/VersusGame';
 
-const SNAPSHOT_HZ = 20;
+const SNAPSHOT_HZ = 15;
+const SNAPSHOT_INTERVAL_MS = 1000 / SNAPSHOT_HZ;
 
 export type OnlineVersusHandlers = {
   onCountdown: (seconds: number, players: MpPlayerInfo[]) => void;
@@ -22,7 +23,7 @@ export type OnlineVersusHandlers = {
 
 /**
  * Host runs VersusGame and broadcasts snapshots.
- * Guest applies snapshots and only sends taps for their slot.
+ * Guest simulates motion locally (puppet) and corrects from host snaps.
  */
 export class OnlineVersusSession {
   yourSlot: VersusPlayerId = 0;
@@ -30,8 +31,8 @@ export class OnlineVersusSession {
   players: MpPlayerInfo[] = [];
   active = false;
   private seq = 0;
-  private snapshotTimer: number | null = null;
   private lastSeq = -1;
+  private lastPublishAt = 0;
 
   constructor(
     private mp: MpClient,
@@ -73,30 +74,19 @@ export class OnlineVersusSession {
     this.active = true;
     this.seq = 0;
     this.lastSeq = -1;
+    this.lastPublishAt = 0;
     this.game.reset();
+    this.game.networkPuppet = !youAreHost;
     this.handlers.onMatchStart({ yourSlot, youAreHost, players });
-    if (youAreHost) {
-      this.startSnapshotLoop();
-    }
   }
 
-  private startSnapshotLoop(): void {
-    this.stopSnapshotLoop();
-    this.snapshotTimer = window.setInterval(() => {
-      if (!this.active || !this.youAreHost) return;
-      this.seq += 1;
-      this.mp.send({ type: 'snapshot', state: this.game.exportSnapshot(this.seq) });
-      if (this.game.phase === 'gameover') {
-        // VersusGame already fired onMatchEnd; also publish over net.
-      }
-    }, 1000 / SNAPSHOT_HZ);
-  }
-
-  private stopSnapshotLoop(): void {
-    if (this.snapshotTimer !== null) {
-      window.clearInterval(this.snapshotTimer);
-      this.snapshotTimer = null;
-    }
+  /** Host: call once per animation frame after physics. */
+  publishSnapshotIfDue(nowMs: number): void {
+    if (!this.active || !this.youAreHost) return;
+    if (nowMs - this.lastPublishAt < SNAPSHOT_INTERVAL_MS) return;
+    this.lastPublishAt = nowMs;
+    this.seq += 1;
+    this.mp.send({ type: 'snapshot', state: this.game.exportSnapshot(this.seq) });
   }
 
   private applyRemoteSnapshot(state: MpMatchSnapshot): void {
@@ -105,13 +95,12 @@ export class OnlineVersusSession {
     this.game.applySnapshot(state);
   }
 
-  /** Local input — only your ball. Host applies immediately; guest also applies optimistically lightly by sending only. */
+  /** Local input — only your ball. */
   handleLocalTap(): void {
     if (!this.active) return;
     if (this.youAreHost) {
       this.game.handleTap(this.yourSlot);
     } else {
-      // Light local prediction: apply tap locally until next authoritative snap overwrites.
       this.game.handleTap(this.yourSlot);
       this.mp.send({ type: 'tap', slot: this.yourSlot });
     }
@@ -148,7 +137,7 @@ export class OnlineVersusSession {
 
   teardown(): void {
     this.active = false;
-    this.stopSnapshotLoop();
+    this.game.networkPuppet = false;
   }
 
   dispose(): void {

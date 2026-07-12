@@ -52,7 +52,7 @@ export class VersusHud {
   }
 
   update(scoreP1: number, scoreP2: number, timeLeft: number, phase: string, anyLaunched: boolean): void {
-    const inGame = phase !== 'menu';
+    const inGame = phase === 'idle' || phase === 'playing';
     if (!inGame) {
       this.hide();
       return;

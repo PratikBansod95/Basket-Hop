@@ -85,11 +85,31 @@ export function renderVersus(
   skinIds: [string, string] = ['classic', 'classic'],
 ): void {
   renderWorldScene(ctx, hoop, [], floatingTexts, state, colliders, false);
+  const teamColors = ['#ff7a18', '#4ea3ff'] as const;
   for (let i = 0; i < balls.length; i += 1) {
     drawBalls(ctx, [balls[i]], state.time, skinIds[i] ?? skinIds[0], FLOOR_Y);
+    drawVersusTeamRing(ctx, balls[i], teamColors[i] ?? teamColors[0], state.time);
   }
   drawHoopRim(ctx, hoop);
   if (colliders) drawDebugColliders(ctx, colliders);
+  ctx.restore();
+}
+
+function drawVersusTeamRing(
+  ctx: CanvasRenderingContext2D,
+  ball: RenderBall,
+  color: string,
+  time: number,
+): void {
+  const idleBob = ball.hasLaunched ? 0 : Math.sin(time * 2.8) * 5;
+  const y = ball.y + idleBob;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(3, ball.radius * 0.14);
+  ctx.globalAlpha = 0.95;
+  ctx.beginPath();
+  ctx.arc(ball.x, y, ball.radius + 3, 0, Math.PI * 2);
+  ctx.stroke();
   ctx.restore();
 }
 

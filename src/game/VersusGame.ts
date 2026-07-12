@@ -89,6 +89,8 @@ export class VersusGame {
   private bounceCooldown = 0;
   private clearBelowY = [0, 0];
   private ended = false;
+  /** Guest online mode: simulate motion only; host snapshots own scores/timer/hoop. */
+  networkPuppet = false;
 
   constructor(
     private launchMechanic: LaunchMechanic,
@@ -106,6 +108,7 @@ export class VersusGame {
   reset(): void {
     this.phase = GamePhase.Idle;
     this.ended = false;
+    this.networkPuppet = false;
     this.hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
     this.balls = [
       createVersusBall(VERSUS_P1_SPAWN_X),
@@ -132,6 +135,7 @@ export class VersusGame {
   returnToMenu(): void {
     this.phase = GamePhase.Menu;
     this.ended = false;
+    this.networkPuppet = false;
   }
 
   captureRenderPrev(): void {
@@ -184,45 +188,47 @@ export class VersusGame {
   }
 
   exportSnapshot(seq: number): import('../../shared/contracts/mp').MpMatchSnapshot {
+    const r1 = (n: number) => Math.round(n * 10) / 10;
+    const r2 = (n: number) => Math.round(n * 100) / 100;
     return {
       seq,
-      timeLeft: this.timeLeft,
+      timeLeft: r2(this.timeLeft),
       scoreP1: this.scoreP1,
       scoreP2: this.scoreP2,
-      climbOffset: this.climbOffset,
-      targetClimbOffset: this.targetClimbOffset,
+      climbOffset: r1(this.climbOffset),
+      targetClimbOffset: r1(this.targetClimbOffset),
       climbAnimating: this.climbAnimating,
       hoop: {
         side: this.hoop.side,
-        x: this.hoop.x,
-        y: this.hoop.y,
-        targetX: this.hoop.targetX,
-        targetY: this.hoop.targetY,
-        slideFromX: this.hoop.slideFromX,
-        slideFromY: this.hoop.slideFromY,
-        slideT: this.hoop.slideT,
-        tilt: this.hoop.tilt,
-        tiltVel: this.hoop.tiltVel,
+        x: r1(this.hoop.x),
+        y: r1(this.hoop.y),
+        targetX: r1(this.hoop.targetX),
+        targetY: r1(this.hoop.targetY),
+        slideFromX: r1(this.hoop.slideFromX),
+        slideFromY: r1(this.hoop.slideFromY),
+        slideT: r2(this.hoop.slideT),
+        tilt: r2(this.hoop.tilt),
+        tiltVel: r2(this.hoop.tiltVel),
         animating: this.hoop.animating,
       },
       balls: [
         {
-          x: this.balls[0].x,
-          y: this.balls[0].y,
-          vx: this.balls[0].vx,
-          vy: this.balls[0].vy,
-          rotation: this.balls[0].rotation,
+          x: r1(this.balls[0].x),
+          y: r1(this.balls[0].y),
+          vx: r1(this.balls[0].vx),
+          vy: r1(this.balls[0].vy),
+          rotation: r2(this.balls[0].rotation),
           hasLaunched: this.balls[0].hasLaunched,
           fallingThrough: this.balls[0].fallingThrough,
           scoredThisShot: this.balls[0].scoredThisShot,
           hitRimThisShot: this.balls[0].hitRimThisShot,
         },
         {
-          x: this.balls[1].x,
-          y: this.balls[1].y,
-          vx: this.balls[1].vx,
-          vy: this.balls[1].vy,
-          rotation: this.balls[1].rotation,
+          x: r1(this.balls[1].x),
+          y: r1(this.balls[1].y),
+          vx: r1(this.balls[1].vx),
+          vy: r1(this.balls[1].vy),
+          rotation: r2(this.balls[1].rotation),
           hasLaunched: this.balls[1].hasLaunched,
           fallingThrough: this.balls[1].fallingThrough,
           scoredThisShot: this.balls[1].scoredThisShot,
@@ -233,7 +239,6 @@ export class VersusGame {
   }
 
   applySnapshot(state: import('../../shared/contracts/mp').MpMatchSnapshot): void {
-    this.captureRenderPrev();
     this.phase = GamePhase.Playing;
     this.timeLeft = state.timeLeft;
     this.scoreP1 = state.scoreP1;
@@ -387,7 +392,7 @@ export class VersusGame {
     this.updateClimb(dt);
 
     if (this.phase === GamePhase.Playing || this.phase === GamePhase.Idle) {
-      if (this.phase === GamePhase.Playing) {
+      if (!this.networkPuppet && this.phase === GamePhase.Playing) {
         this.timeLeft = Math.max(0, this.timeLeft - dt);
         if (this.timeLeft <= 0) {
           this.finishMatch();
@@ -435,17 +440,22 @@ export class VersusGame {
       }
       this.bounceCooldown -= dt;
 
-      // Score check — gather first so simultaneous baskets share one climb/flip.
-      const scored: Array<{ player: VersusPlayerId; isSwish: boolean }> = [];
-      for (let i = 0; i < 2; i += 1) {
-        const result = checkScore(this.balls[i], this.hoop);
-        if (result) scored.push({ player: i as VersusPlayerId, isSwish: result.isSwish });
-      }
-      if (scored.length > 0) {
-        for (const hit of scored) {
-          this.applyPlayerScore(hit.player, hit.isSwish);
+      if (!this.networkPuppet) {
+        // Score check — gather first so simultaneous baskets share one climb/flip.
+        const scored: Array<{ player: VersusPlayerId; isSwish: boolean }> = [];
+        for (let i = 0; i < 2; i += 1) {
+          const result = checkScore(this.balls[i], this.hoop);
+          if (result) scored.push({ player: i as VersusPlayerId, isSwish: result.isSwish });
         }
-        this.advanceSharedCourt(scored[scored.length - 1]!.isSwish, this.balls[scored[scored.length - 1]!.player]);
+        if (scored.length > 0) {
+          for (const hit of scored) {
+            this.applyPlayerScore(hit.player, hit.isSwish);
+          }
+          this.advanceSharedCourt(
+            scored[scored.length - 1]!.isSwish,
+            this.balls[scored[scored.length - 1]!.player],
+          );
+        }
       }
 
       for (let i = 0; i < 2; i += 1) {

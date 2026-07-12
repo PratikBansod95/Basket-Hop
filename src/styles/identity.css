@@ -336,6 +336,10 @@
 }
 
 /* Versus HUD + result */
+#versus-hud.hidden {
+  display: none !important;
+}
+
 .versus-hud {
   position: absolute;
   inset: 0;

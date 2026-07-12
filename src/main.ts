@@ -275,6 +275,7 @@ async function main(): Promise<void> {
       reason: 'timer' | 'forfeit';
     },
   ): void {
+    versusHud.hide();
     sfx.gameOver();
     versusResultModal.show(result, {
       ...onlineLabels,
@@ -363,6 +364,8 @@ async function main(): Promise<void> {
     activeMode = 'solo';
     cleanupOnline();
     versusKind = 'local';
+    onlineLabels = { p1: 'P1', p2: 'P2' };
+    versusHud.setLabels('P1', 'P2', 'Left tap = P1 · Right tap = P2');
     skinsShop.hide();
     leaderboard.hide();
     nicknameGate.hide();
@@ -398,6 +401,8 @@ async function main(): Promise<void> {
     activeMode = 'menu';
     cleanupOnline();
     versusKind = 'local';
+    onlineLabels = { p1: 'P1', p2: 'P2' };
+    versusHud.setLabels('P1', 'P2', 'Left tap = P1 · Right tap = P2');
     game.returnToMenu();
     versusGame.returnToMenu();
     gameOverModal.hide();
@@ -492,17 +497,13 @@ async function main(): Promise<void> {
 
     if (activeMode === 'versus') {
       versusGame.captureRenderPrev();
-      const simulate = !onlineSession?.active || onlineSession.youAreHost;
-      if (simulate) {
-        physicsAcc = stepFixed(
-          physicsAcc,
-          dt,
-          (fixedDt) => versusGame.update(fixedDt),
-          maxPhysicsStepsForQuality(quality),
-        );
-      } else {
-        physicsAcc = 0;
-      }
+      physicsAcc = stepFixed(
+        physicsAcc,
+        dt,
+        (fixedDt) => versusGame.update(fixedDt),
+        maxPhysicsStepsForQuality(quality),
+      );
+      onlineSession?.publishSnapshotIfDue(now);
       const alpha = Math.max(0, Math.min(1, physicsAcc / FIXED_DT));
       const b0 = versusGame.getDisplayBall(0, alpha);
       const b1 = versusGame.getDisplayBall(1, alpha);
