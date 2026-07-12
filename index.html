@@ -131,6 +131,15 @@
             </span>
             <span class="menu-nav-label">How to play</span>
           </button>
+          <button type="button" class="menu-nav-btn" id="dock-leaderboard">
+            <span class="menu-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 32 32" fill="none">
+                <path d="M8 22V14M16 22V8M24 22v-6" stroke="#1a2b48" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M6 24h20" stroke="#ff7a18" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="menu-nav-label">Ranks</span>
+          </button>
           <button type="button" class="menu-nav-btn" id="dock-stats">
             <span class="menu-nav-icon" aria-hidden="true">
               <svg viewBox="0 0 32 32" fill="none">
@@ -232,6 +241,57 @@
             </button>
           </div>
           <button class="ui-btn ui-btn-primary" id="menu-settings-close-btn" type="button">Done</button>
+        </div>
+      </div>
+
+      <div id="nickname-screen" class="menu-overlay nickname-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="nickname-title">
+        <div class="nickname-card ui-panel">
+          <p class="nickname-kicker">Welcome to the court</p>
+          <h2 class="nickname-title" id="nickname-title">Choose your nickname</h2>
+          <p class="nickname-copy">This name shows on the global leaderboard when you hop high.</p>
+          <div class="nickname-tips" aria-hidden="true">
+            <span class="nickname-tip">3–8 characters</span>
+            <span class="nickname-tip">Letters and numbers</span>
+          </div>
+          <input
+            id="nicknameInput"
+            class="nickname-input"
+            type="text"
+            inputmode="text"
+            maxlength="8"
+            autocomplete="nickname"
+            placeholder="HopStar"
+          />
+          <p id="nicknameError" class="nickname-error hidden" aria-live="polite"></p>
+          <p class="nickname-note">You only need to do this once on this device.</p>
+          <button id="nicknameSubmit" class="ui-btn ui-btn-primary nickname-submit" type="button">
+            Save and play
+          </button>
+        </div>
+      </div>
+
+      <div id="leaderboard-screen" class="menu-overlay leaderboard-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="leaderboard-title">
+        <div class="league-frame">
+          <div class="league-frame-inner">
+            <header class="league-banner">
+              <p class="league-kicker">Global leaderboard</p>
+              <h2 class="league-title" id="leaderboard-title">Court ranks</h2>
+              <p class="league-subtitle">Highest solo scores across the rooftops</p>
+            </header>
+            <div class="league-body">
+              <p id="leaderboardLoading" class="league-status league-loading hidden">Loading scores...</p>
+              <p id="leaderboardError" class="league-status league-error hidden"></p>
+              <div class="league-columns" aria-hidden="true">
+                <span>Rank</span>
+                <span>Player</span>
+                <span>Score</span>
+              </div>
+              <div class="league-scroll">
+                <div id="leaderboardList" class="league-list"></div>
+              </div>
+            </div>
+            <button id="btn-leaderboard-close" class="ui-btn ui-btn-primary league-back-btn" type="button">Back</button>
+          </div>
         </div>
       </div>
 

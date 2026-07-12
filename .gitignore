@@ -3,3 +3,6 @@ dist/
 dist-ads/
 dist-ads-zip/
 *.local
+.env
+.env.*
+!.env.example

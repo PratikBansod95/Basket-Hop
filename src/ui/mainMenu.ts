@@ -24,12 +24,19 @@ export class MainMenu {
   private onStart: () => void;
   private onMuteToggle: (() => void) | null = null;
   private onOpenSkinsShop: (() => void) | null = null;
+  private onOpenLeaderboard: (() => void) | null = null;
   private muted = false;
 
-  constructor(onStart: () => void, onMuteToggle?: () => void, onOpenSkinsShop?: () => void) {
+  constructor(
+    onStart: () => void,
+    onMuteToggle?: () => void,
+    onOpenSkinsShop?: () => void,
+    onOpenLeaderboard?: () => void,
+  ) {
     this.onStart = onStart;
     this.onMuteToggle = onMuteToggle ?? null;
     this.onOpenSkinsShop = onOpenSkinsShop ?? null;
+    this.onOpenLeaderboard = onOpenLeaderboard ?? null;
     this.root = document.getElementById('main-menu')!;
     this.howToRoot = document.getElementById('how-to-play')!;
     this.statsRoot = document.getElementById('menu-stats')!;
@@ -48,7 +55,6 @@ export class MainMenu {
 
     this.root.querySelector('#start-btn')!.addEventListener('click', () => {
       this.closeAllModals();
-      this.hide();
       this.onStart();
     });
 
@@ -103,6 +109,11 @@ export class MainMenu {
 
     this.root.querySelector('#dock-stats')!.addEventListener('click', () => {
       this.showStats();
+    });
+
+    this.root.querySelector('#dock-leaderboard')!.addEventListener('click', () => {
+      this.closeAllModals();
+      this.onOpenLeaderboard?.();
     });
   }
 

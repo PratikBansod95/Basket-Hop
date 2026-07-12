@@ -18,6 +18,8 @@ import { MainMenu } from './ui/mainMenu';
 import { Hud } from './ui/hud';
 import { renderMenuHomeFx } from './ui/menuHome3d';
 import { SkinsShop } from './ui/skinsShop';
+import { NicknameGate } from './ui/nicknameGate';
+import { LeaderboardOverlay } from './ui/leaderboardOverlay';
 import { bindStageResize, computeStageLayout, layoutsEqual, applyResponsiveCssVars, syncSafeAreaCssVars, type StageLayout } from './ui/stageLayout';
 import { FIXED_DT, stepFixed } from './game/physics';
 import {
@@ -27,6 +29,7 @@ import {
   onRenderQualityChange,
   shakeScaleForQuality,
 } from './game/renderQuality';
+import { newClientRunId, submitSoloRunScore } from './services/api/submitRun';
 
 const launchMechanic = new DefaultTapLaunch();
 
@@ -41,8 +44,11 @@ async function main(): Promise<void> {
   const appRoot = document.getElementById('app')!;
   let lastLayout: StageLayout | null = null;
   let physicsAcc = 0;
+  let currentRunId = newClientRunId();
 
   let saveData: SaveData = normalizeSkinSave(await platform.loadSave());
+  // Persist migrated identity fields (playerId) for older local saves.
+  void platform.saveSave(saveData);
   let userMuted = false;
   let platformAudio = platform.isAudioEnabled();
   const tutorialEnabled = shouldRunTutorial(saveData);
@@ -67,8 +73,26 @@ async function main(): Promise<void> {
     }
   }
 
+  const nicknameGate = new NicknameGate({
+    getSave: () => saveData,
+    onRegistered: (playerId, nickname) => {
+      saveData = { ...saveData, playerId, nickname };
+      void platform.saveSave(saveData);
+    },
+  });
+
+  const leaderboard = new LeaderboardOverlay(() => saveData);
+
+  function requireNicknameThen(action: () => void): void {
+    if (nicknameGate.needsNickname(saveData)) {
+      nicknameGate.show(saveData.nickname);
+      return;
+    }
+    action();
+  }
+
   const gameOverModal = new GameOverModal(
-    () => startRun(),
+    () => requireNicknameThen(() => startRun()),
     () => goToMainMenu(),
     () => platform.exitAd(),
   );
@@ -77,7 +101,7 @@ async function main(): Promise<void> {
   const mainMenu = new MainMenu(
     () => {
       sfx.unlock();
-      startRun();
+      requireNicknameThen(() => startRun());
     },
     () => {
       userMuted = !userMuted;
@@ -89,6 +113,9 @@ async function main(): Promise<void> {
         void platform.saveSave(saveData);
         mainMenu.refreshWallet(saveData);
       });
+    },
+    () => {
+      void leaderboard.show();
     },
   );
 
@@ -156,6 +183,12 @@ async function main(): Promise<void> {
         void platform.sendScore(stats.score);
       }
       void platform.saveSave(saveData);
+      submitSoloRunScore(
+        saveData,
+        stats,
+        platform.isAdsMode() ? 'playables' : 'web',
+        currentRunId,
+      );
       gameOverModal.show(stats, saveData, game.runCoins);
     },
     onStaminaTutorialComplete: () => {
@@ -181,6 +214,9 @@ async function main(): Promise<void> {
 
   function startRun(): void {
     skinsShop.hide();
+    leaderboard.hide();
+    nicknameGate.hide();
+    currentRunId = newClientRunId();
     game.reset();
     gameOverModal.hide();
     mainMenu.hide();
@@ -193,12 +229,16 @@ async function main(): Promise<void> {
     mainMenu.show(saveData);
     mainMenu.setMuted(isMuted());
     setMenuFxVisible(true);
+    if (nicknameGate.needsNickname(saveData)) {
+      nicknameGate.show();
+    }
   }
 
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     if (game.phase === GamePhase.GameOver || game.phase === GamePhase.Menu) return;
     if (mainMenu.isVisible()) return;
+    if (nicknameGate.isOpen() || leaderboard.isOpen()) return;
     sfx.unlock();
     game.handleTap();
   });
@@ -210,6 +250,10 @@ async function main(): Promise<void> {
   ctx.fillStyle = '#0a0e14';
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   platform.firstFrameReady();
+
+  if (nicknameGate.needsNickname(saveData)) {
+    nicknameGate.show();
+  }
 
   await platform.getLanguage();
   sfx.setEnabled(!isMuted());

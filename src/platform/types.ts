@@ -10,6 +10,18 @@ export interface SaveData {
   staminaTutorialSeen: boolean;
   ownedSkins: string[];
   equippedSkin: string;
+  /** Soft identity — Hopiku-style UUID + nickname for leaderboard / multiplayer. */
+  playerId: string;
+  nickname: string;
+}
+
+function newPlayerId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // UUID-shaped fallback for environments without crypto.randomUUID (Postgres uuid column).
+  const hex = () => Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0');
+  return `${hex()}${hex()}-${hex()}-4${hex().slice(1)}-a${hex().slice(1)}-${hex()}${hex()}${hex()}`;
 }
 
 export const DEFAULT_SAVE: SaveData = {
@@ -22,10 +34,18 @@ export const DEFAULT_SAVE: SaveData = {
   staminaTutorialSeen: false,
   ownedSkins: ['classic'],
   equippedSkin: 'classic',
+  playerId: '',
+  nickname: '',
 };
 
 export function parseSaveData(raw: string | null): SaveData {
-  if (!raw) return { ...DEFAULT_SAVE, ownedSkins: [...DEFAULT_SAVE.ownedSkins] };
+  if (!raw) {
+    return {
+      ...DEFAULT_SAVE,
+      ownedSkins: [...DEFAULT_SAVE.ownedSkins],
+      playerId: newPlayerId(),
+    };
+  }
   try {
     const data = JSON.parse(raw) as Partial<SaveData>;
     const owned = Array.isArray(data.ownedSkins)
@@ -42,9 +62,15 @@ export function parseSaveData(raw: string | null): SaveData {
       staminaTutorialSeen: data.staminaTutorialSeen ?? false,
       ownedSkins: owned,
       equippedSkin: typeof data.equippedSkin === 'string' ? data.equippedSkin : 'classic',
+      playerId: typeof data.playerId === 'string' && data.playerId.length > 0 ? data.playerId : newPlayerId(),
+      nickname: typeof data.nickname === 'string' ? data.nickname.trim() : '',
     };
   } catch {
-    return { ...DEFAULT_SAVE, ownedSkins: [...DEFAULT_SAVE.ownedSkins] };
+    return {
+      ...DEFAULT_SAVE,
+      ownedSkins: [...DEFAULT_SAVE.ownedSkins],
+      playerId: newPlayerId(),
+    };
   }
 }
 

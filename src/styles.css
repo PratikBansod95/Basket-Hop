@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Permanent+Marker&display=swap');
 @import './styles/menu-screen.css';
 @import './styles/skins-shop.css';
+@import './styles/identity.css';
 
 :root {
   /* Core palette — midnight court + ember accent */

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_SAVE } from '../platform/types';
 import { Game } from './Game';
 import { DefaultTapLaunch } from './mechanics/defaultTapLaunch';
 import { GamePhase } from './types';
@@ -74,51 +75,29 @@ function stepToTutorialPause(game: Game, maxFrames = 300): boolean {
 describe('FTUE tutorial', () => {
   it('temporarily enables for all player save states', () => {
     expect(shouldRunTutorial({
+      ...DEFAULT_SAVE,
       best: 0,
-      coins: 0,
       totalGames: 0,
-      totalShots: 0,
-      cleanShots: 0,
       tutorialSeen: false,
-      staminaTutorialSeen: false,
-      ownedSkins: ['classic'],
-      equippedSkin: 'classic',
     })).toBe(true);
 
     expect(shouldRunTutorial({
+      ...DEFAULT_SAVE,
       best: 0,
-      coins: 0,
       totalGames: 1,
-      totalShots: 0,
-      cleanShots: 0,
       tutorialSeen: false,
-      staminaTutorialSeen: false,
-      ownedSkins: ['classic'],
-      equippedSkin: 'classic',
     })).toBe(true);
 
     expect(shouldRunTutorial({
+      ...DEFAULT_SAVE,
       best: 3,
-      coins: 0,
       totalGames: 0,
-      totalShots: 0,
-      cleanShots: 0,
       tutorialSeen: false,
-      staminaTutorialSeen: false,
-      ownedSkins: ['classic'],
-      equippedSkin: 'classic',
     })).toBe(true);
 
     expect(shouldRunTutorial({
-      best: 0,
-      coins: 0,
-      totalGames: 0,
-      totalShots: 0,
-      cleanShots: 0,
+      ...DEFAULT_SAVE,
       tutorialSeen: true,
-      staminaTutorialSeen: false,
-      ownedSkins: ['classic'],
-      equippedSkin: 'classic',
     })).toBe(true);
   });
 
@@ -185,18 +164,12 @@ describe('FTUE tutorial', () => {
 describe('stamina tutorial gate', () => {
   it('runs only when the save has not seen it', () => {
     expect(shouldRunStaminaTutorial({
-      best: 0,
-      coins: 0,
-      totalGames: 0,
-      totalShots: 0,
-      cleanShots: 0,
-      tutorialSeen: false,
+      ...DEFAULT_SAVE,
       staminaTutorialSeen: false,
-      ownedSkins: ['classic'],
-      equippedSkin: 'classic',
     })).toBe(true);
 
     expect(shouldRunStaminaTutorial({
+      ...DEFAULT_SAVE,
       best: 12,
       coins: 4,
       totalGames: 3,
@@ -204,8 +177,6 @@ describe('stamina tutorial gate', () => {
       cleanShots: 5,
       tutorialSeen: true,
       staminaTutorialSeen: true,
-      ownedSkins: ['classic'],
-      equippedSkin: 'classic',
     })).toBe(false);
   });
 

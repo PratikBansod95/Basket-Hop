@@ -5,12 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && npm run typecheck:server",
     "build:ads": "tsc && vite build --mode ads && node scripts/build-ads-playable.mjs",
     "preview": "vite preview",
+    "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@vercel/node": "^5.8.22",
+    "@vercel/postgres": "^0.10.0"
+  },
   "devDependencies": {
+    "@types/node": "^22.13.10",
     "archiver": "^7.0.1",
     "typescript": "^5.7.3",
     "vite": "^6.2.0",

@@ -19,13 +19,14 @@ describe('save data helpers', () => {
   it('defaults coins and stamina tutorial flag when parsing older saves', () => {
     const save = parseSaveData(JSON.stringify({ best: 7, totalGames: 3 }));
 
-    expect(save).toEqual({
-      ...DEFAULT_SAVE,
-      best: 7,
-      totalGames: 3,
-      coins: 0,
-      staminaTutorialSeen: false,
-    });
+    expect(save.best).toBe(7);
+    expect(save.totalGames).toBe(3);
+    expect(save.coins).toBe(0);
+    expect(save.staminaTutorialSeen).toBe(false);
+    expect(save.nickname).toBe('');
+    expect(save.playerId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    );
   });
 
   it('banks run coins into the saved wallet at game over', () => {
