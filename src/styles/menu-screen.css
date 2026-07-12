@@ -7,7 +7,8 @@
   --menu-orange-bright: #ffb347;
   --menu-card: #ffffff;
   --menu-shadow: 0 16px 36px rgba(26, 43, 72, 0.14);
-  --menu-nav-height: clamp(108px, 16cqh, 128px);
+  /* Room for 3 dock icons + labels + safe area */
+  --menu-nav-height: clamp(124px, 19cqh, 152px);
 }
 
 #main-menu {
@@ -115,9 +116,10 @@
 .menu-storefront-btn {
   position: absolute;
   z-index: 6;
-  left: clamp(8px, 2.5cqw, 16px);
-  top: clamp(132px, 24cqh, 230px);
-  width: clamp(72px, 18cqw, 95px);
+  left: clamp(10px, 3cqw, 18px);
+  /* Sit under the top bar — clear of the stats card */
+  top: clamp(58px, 8.5cqh, 72px);
+  width: clamp(56px, 14cqw, 72px);
   min-width: var(--touch-min);
   min-height: var(--touch-min);
   padding: 0;
@@ -414,20 +416,21 @@
   }
 }
 
-/* Center stack */
+/* Center stack — reserved bottom band for dock */
 .menu-interactive {
   position: relative;
   z-index: 4;
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: clamp(14px, 3cqh, 20px);
+  justify-content: flex-end;
+  gap: clamp(10px, 2.2cqh, 16px);
   width: min(90%, 400px);
   margin: 0 auto;
-  padding: clamp(8px, 2cqh, 16px) clamp(14px, 3.5cqw, 20px)
-    calc(var(--menu-nav-height) + 8px);
+  padding: clamp(6px, 1.5cqh, 12px) clamp(14px, 3.5cqw, 20px)
+    calc(var(--menu-nav-height) + 10px);
   pointer-events: none;
+  min-height: 0;
 }
 
 .menu-stats-card {
@@ -439,6 +442,7 @@
   background: var(--menu-card);
   box-shadow: var(--menu-shadow);
   pointer-events: auto;
+  flex-shrink: 0;
 }
 
 .menu-stat-block {
@@ -528,6 +532,7 @@
   color: #fff;
   cursor: pointer;
   pointer-events: auto;
+  flex-shrink: 0;
   box-shadow:
     0 14px 32px rgba(255, 122, 24, 0.38),
     inset 0 2px 0 rgba(255, 255, 255, 0.35);
@@ -576,19 +581,20 @@
 
 .menu-versus-cta {
   width: 100%;
-  margin-top: 10px;
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 12px 16px;
-  border: 2px solid rgba(26, 43, 72, 0.16);
+  padding: clamp(10px, 2.2cqh, 14px) 16px;
+  border: 2px solid rgba(26, 43, 72, 0.14);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.9);
   color: var(--menu-navy);
   cursor: pointer;
   pointer-events: auto;
   box-shadow: 0 8px 20px rgba(26, 43, 72, 0.1);
+  flex-shrink: 0;
 }
 
 .menu-versus-cta:active {
@@ -597,13 +603,13 @@
 
 .menu-versus-label {
   font-family: var(--font-display);
-  font-size: clamp(20px, 5cqw, 24px);
+  font-size: clamp(18px, 4.8cqw, 22px);
   letter-spacing: 0.06em;
 }
 
 .menu-versus-sub {
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: clamp(11px, 2.6cqw, 12px);
   font-weight: 700;
   color: var(--menu-navy-soft);
 }
@@ -639,32 +645,41 @@
   height: 22px;
 }
 
-/* Bottom nav */
+/* Bottom nav — fixed dock under CTAs */
 .menu-bottom-nav {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 50%;
+  right: auto;
   bottom: 0;
+  transform: translateX(-50%);
   z-index: 5;
+  width: min(92%, 380px);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: clamp(6px, 1.5cqw, 10px);
-  padding: clamp(8px, 1.5cqh, 12px) clamp(12px, 3.5cqw, 18px)
-    calc(clamp(8px, 1.5cqh, 12px) + env(safe-area-inset-bottom, 0px));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(8px, 2.5cqw, 14px);
+  padding: clamp(10px, 1.8cqh, 14px) clamp(10px, 3cqw, 14px)
+    calc(clamp(10px, 1.8cqh, 14px) + env(safe-area-inset-bottom, 0px));
   pointer-events: auto;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(6, 10, 18, 0.28) 35%,
+    rgba(6, 10, 18, 0.55) 100%
+  );
 }
 
 .menu-bottom-nav--compact {
-  grid-template-columns: repeat(2, minmax(0, 140px));
-  justify-content: center;
-  gap: clamp(16px, 5cqw, 28px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-content: stretch;
+  gap: clamp(8px, 2.5cqw, 14px);
 }
 
 .menu-nav-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  min-width: 0;
   padding: 0;
   border: none;
   background: transparent;
@@ -680,7 +695,7 @@
 .menu-nav-icon {
   width: 100%;
   aspect-ratio: 1;
-  max-width: 68px;
+  max-width: 62px;
   display: grid;
   place-items: center;
   border-radius: 16px;
@@ -696,14 +711,18 @@
 
 .menu-nav-label {
   font-family: var(--font-body);
-  font-size: clamp(8px, 2cqw, 9px);
+  font-size: clamp(9px, 2.2cqw, 11px);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--menu-navy);
+  color: #fff8ec;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
   text-align: center;
   line-height: 1.15;
   max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Modals */
@@ -865,34 +884,69 @@
 
 @media (max-height: 700px) {
   :root {
-    --menu-nav-height: clamp(96px, 14cqh, 112px);
+    --menu-nav-height: clamp(112px, 17cqh, 132px);
+  }
+
+  .menu-logo {
+    margin-top: 0;
   }
 
   .menu-logo-basket {
-    font-size: clamp(32px, 9cqw, 44px);
+    font-size: clamp(28px, 8cqw, 40px);
   }
 
   .menu-logo-hop,
   .menu-logo-hop-shadow {
-    font-size: clamp(44px, 12cqw, 60px);
+    font-size: clamp(40px, 11cqw, 54px);
+  }
+
+  .menu-logo-tagline {
+    margin-top: 4px;
+  }
+
+  .menu-stats-card {
+    padding: 12px 12px;
   }
 
   .menu-stat-value {
-    font-size: clamp(28px, 7.5cqw, 36px);
+    font-size: clamp(26px, 7cqw, 34px);
+  }
+
+  .menu-stat-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 4px;
+  }
+
+  .menu-stat-divider {
+    height: 56px;
+  }
+
+  .menu-start-cta {
+    padding: 12px 14px;
   }
 
   .menu-start-label {
     font-size: 20px;
   }
 
+  .menu-versus-cta {
+    padding: 8px 14px;
+  }
+
   .menu-nav-icon {
-    max-width: 58px;
+    max-width: 52px;
+  }
+
+  .menu-storefront-btn {
+    width: clamp(48px, 12cqw, 60px);
+    top: clamp(52px, 7.5cqh, 64px);
   }
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
   :root {
-    --menu-nav-height: clamp(88px, 18cqh, 104px);
+    --menu-nav-height: clamp(96px, 20cqh, 112px);
   }
 
   .menu-interactive {
@@ -908,8 +962,9 @@
     flex: 1 1 240px;
   }
 
-  .menu-start-cta {
-    flex: 1 1 200px;
+  .menu-start-cta,
+  .menu-versus-cta {
+    flex: 1 1 180px;
   }
 
   .menu-logo {
@@ -917,10 +972,14 @@
   }
 
   .menu-nav-icon {
-    max-width: 52px;
+    max-width: 48px;
   }
 
   .menu-nav-label {
-    font-size: 7px;
+    font-size: 8px;
+  }
+
+  .menu-storefront-btn {
+    display: none;
   }
 }
