@@ -638,8 +638,8 @@ body {
 .hint-pill {
   position: absolute;
   left: 50%;
-  bottom: clamp(92px, 10cqh, 118px);
-  top: auto;
+  top: clamp(108px, 12cqh, 132px);
+  bottom: auto;
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
@@ -1429,8 +1429,10 @@ body {
     padding: 8px 12px;
   }
 
-  .hint-pill {
-    bottom: clamp(96px, 10cqh, 120px);
+  .hint-pill,
+  .hint-pill.tutorial-prompt {
+    top: clamp(88px, 13cqh, 106px);
+    bottom: auto;
     padding: 8px 14px;
   }
 }
