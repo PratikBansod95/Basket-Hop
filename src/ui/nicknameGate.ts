@@ -11,6 +11,7 @@ export class NicknameGate {
   private root: HTMLElement;
   private input: HTMLInputElement;
   private errorEl: HTMLElement;
+  private countEl: HTMLElement;
   private submitBtn: HTMLButtonElement;
   private callbacks: NicknameGateCallbacks;
   private open = false;
@@ -20,6 +21,7 @@ export class NicknameGate {
     this.root = document.getElementById('nickname-screen')!;
     this.input = document.getElementById('nicknameInput') as HTMLInputElement;
     this.errorEl = document.getElementById('nicknameError')!;
+    this.countEl = document.getElementById('nicknameCount')!;
     this.submitBtn = document.getElementById('nicknameSubmit') as HTMLButtonElement;
 
     this.submitBtn.addEventListener('click', () => {
@@ -30,7 +32,10 @@ export class NicknameGate {
       event.preventDefault();
       void this.submit();
     });
-    this.input.addEventListener('input', () => this.setError(''));
+    this.input.addEventListener('input', () => {
+      this.setError('');
+      this.updateCount();
+    });
   }
 
   needsNickname(save: SaveData): boolean {
@@ -44,6 +49,7 @@ export class NicknameGate {
   show(initialNickname = ''): void {
     this.open = true;
     this.input.value = initialNickname;
+    this.updateCount();
     this.setError('');
     this.setPending(false);
     this.root.classList.remove('hidden');
@@ -62,6 +68,10 @@ export class NicknameGate {
   private setError(message: string): void {
     this.errorEl.textContent = message;
     this.errorEl.classList.toggle('hidden', message.length === 0);
+  }
+
+  private updateCount(): void {
+    this.countEl.textContent = `${this.input.value.length} / ${this.input.maxLength}`;
   }
 
   private setPending(pending: boolean): void {

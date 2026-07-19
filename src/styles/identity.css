@@ -2,93 +2,185 @@
 
 .nickname-overlay {
   z-index: 20;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 122, 24, 0.14), transparent 42%),
+    rgba(8, 10, 16, 0.7);
 }
 
 .nickname-card {
-  width: min(90cqw, 360px);
+  width: min(92cqw, 390px);
+  max-height: min(92cqh, 680px);
   display: flex;
   flex-direction: column;
-  gap: 13px;
-  padding: 24px 18px 18px;
+  padding: clamp(26px, 5cqw, 34px) clamp(20px, 5cqw, 26px) 22px;
+  border-radius: 24px;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 193, 77, 0.18), transparent 34%),
+    linear-gradient(165deg, #fffaf1 0%, #eee4d5 100%);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.45) inset;
   animation: panel-rise 0.4s var(--ease-out);
+  scrollbar-width: none;
+}
+
+.nickname-card::-webkit-scrollbar {
+  display: none;
+}
+
+.nickname-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  text-align: center;
 }
 
 .nickname-kicker {
   margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 122, 24, 0.11);
   color: var(--menu-orange);
   font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1.6px;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 1.4px;
   text-align: center;
   text-transform: uppercase;
+}
+
+.nickname-kicker span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--menu-orange);
+  box-shadow: 0 0 0 3px rgba(255, 122, 24, 0.16);
 }
 
 .nickname-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(26px, 6.5cqw, 32px);
-  letter-spacing: 0.05em;
+  font-size: clamp(30px, 7.8cqw, 38px);
+  line-height: 1.05;
+  letter-spacing: 0.045em;
   color: var(--menu-navy);
   text-align: center;
+  text-wrap: balance;
 }
 
 .nickname-copy {
   margin: 0;
+  max-width: 31ch;
   color: var(--menu-navy-soft);
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-align: center;
-  line-height: 1.45;
+  line-height: 1.5;
+}
+
+.nickname-field {
+  margin-top: 22px;
+  padding: 14px;
+  border: 1px solid rgba(26, 43, 72, 0.11);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 24px rgba(26, 43, 72, 0.06);
+}
+
+.nickname-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 2px 9px;
+  font-family: var(--font-body);
+  line-height: 1.2;
+}
+
+.nickname-label-row label {
+  color: var(--menu-navy);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.nickname-count {
+  color: var(--menu-navy-soft);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .nickname-tips {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 6px;
+  margin-top: 10px;
+  line-height: 1.2;
 }
 
 .nickname-tip {
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 999px;
   background: rgba(255, 122, 24, 0.12);
   color: var(--menu-navy);
   font-family: var(--font-body);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
 }
 
 .nickname-input {
   width: 100%;
+  min-height: 56px;
   box-sizing: border-box;
-  padding: 14px 16px;
-  border: 2px solid rgba(26, 43, 72, 0.16);
-  border-radius: 18px;
+  padding: 14px 15px;
+  border: 2px solid rgba(26, 43, 72, 0.14);
+  border-radius: 14px;
   font-family: var(--font-body);
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
   color: var(--menu-navy);
   outline: none;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.04);
+  background: #fff;
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.035),
+    0 4px 12px rgba(26, 43, 72, 0.05);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.nickname-input::placeholder {
+  color: rgba(26, 43, 72, 0.42);
 }
 
 .nickname-input:focus {
   border-color: var(--menu-orange);
   box-shadow:
-    0 0 0 4px rgba(255, 122, 24, 0.16),
-    inset 0 2px 6px rgba(0, 0, 0, 0.04);
+    0 0 0 4px rgba(255, 122, 24, 0.14),
+    0 8px 20px rgba(201, 78, 24, 0.1);
+  transform: translateY(-1px);
 }
 
 .nickname-error {
-  margin: 0;
+  margin: 10px 3px 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: rgba(198, 40, 40, 0.09);
   color: #c62828;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  text-align: center;
+  line-height: 1.35;
+  text-align: left;
 }
 
 .nickname-error.hidden {
@@ -96,17 +188,59 @@
 }
 
 .nickname-note {
-  margin: -4px 0 0;
+  margin: 13px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   color: var(--menu-navy-soft);
   font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
   text-align: center;
+}
+
+.nickname-note span {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(62, 207, 142, 0.16);
+  color: #168458;
+  font-size: 11px;
 }
 
 .nickname-submit {
   width: 100%;
-  min-height: 54px;
+  min-height: 56px;
+  margin-top: 16px;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(201, 78, 24, 0.28);
+}
+
+@container game-stage (max-height: 620px) {
+  .nickname-card {
+    padding-top: 22px;
+  }
+
+  .nickname-header {
+    gap: 6px;
+  }
+
+  .nickname-copy {
+    font-size: 12px;
+  }
+
+  .nickname-field {
+    margin-top: 14px;
+  }
+
+  .nickname-submit {
+    margin-top: 11px;
+  }
 }
 
 .leaderboard-overlay {
