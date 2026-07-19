@@ -61,7 +61,7 @@ export class MainMenu {
       this.onStart();
     });
 
-    this.root.querySelector('#versus-btn')!.addEventListener('click', () => {
+    this.root.querySelector('#versus-btn')?.addEventListener('click', () => {
       this.closeAllModals();
       this.onVersus?.();
     });
