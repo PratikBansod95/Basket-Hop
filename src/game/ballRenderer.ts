@@ -79,10 +79,26 @@ export function drawBall(
 
   if (img && img.complete && img.naturalWidth > 0) {
     const size = radius * 2.05;
+    const cropX = img.naturalWidth * 0.05;
+    const cropY = img.naturalHeight * 0.05;
+    const cropWidth = img.naturalWidth - cropX * 2;
+    const cropHeight = img.naturalHeight - cropY * 2;
     ctx.beginPath();
     ctx.arc(0, 0, radius * 0.98, 0, Math.PI * 2);
     ctx.clip();
-    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(
+      img,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      -size / 2,
+      -size / 2,
+      size,
+      size,
+    );
   } else {
     drawFallbackBall(ctx, radius);
   }
