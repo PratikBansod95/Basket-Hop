@@ -38,34 +38,65 @@ export class GameOverModal {
     const best = Math.max(save.best, stats.score);
     const isNewBest = stats.score >= save.best && stats.score > 0;
     this.root.innerHTML = `
-      <div class="modal ui-panel">
-        <div class="title">Game over</div>
-        <div class="record-badge${isNewBest ? ' visible' : ''}">New best</div>
-        <div class="score-label">Final score</div>
-        <div class="score-value">${stats.score}</div>
-        <div class="stats-grid">
-          <div class="ui-stat-chip">
-            <span class="label">Best</span>
-            <span class="value">${best}</span>
+      <div class="modal result-sheet">
+        <header class="result-header">
+          <div class="result-emblem" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M8 4h8v3a4 4 0 01-8 0V4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M6 4H4a2 2 0 002 2M18 4h2a2 2 0 01-2 2M12 11v4M8.5 20h7M10 15h4l1.5 5h-7l1.5-5z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </div>
-          <div class="ui-stat-chip">
-            <span class="label">Clean</span>
-            <span class="value">${cleanPct}%</span>
+          <div class="result-heading">
+            <p class="result-kicker">Run complete</p>
+            <h2 class="title">Game over</h2>
+            <p class="result-subtitle">Every shot takes you higher</p>
           </div>
-          <div class="ui-stat-chip">
-            <span class="label">Run coins</span>
-            <span class="value">${runCoins}</span>
-          </div>
-          <div class="ui-stat-chip">
-            <span class="label">Wallet</span>
-            <span class="value">${save.coins}</span>
+        </header>
+        <div class="result-body">
+          <section class="result-score">
+            <div class="record-badge${isNewBest ? ' visible' : ''}">
+              <span aria-hidden="true">★</span> New personal best
+            </div>
+            <div class="score-label">Final score</div>
+            <div class="score-value">${stats.score}</div>
+          </section>
+          <div class="stats-grid">
+            <div class="result-stat">
+              <span class="label">Personal best</span>
+              <span class="value">${best}</span>
+            </div>
+            <div class="result-stat">
+              <span class="label">Clean shots</span>
+              <span class="value">${cleanPct}%</span>
+            </div>
+            <div class="result-stat">
+              <span class="label">Run coins</span>
+              <span class="value">+${runCoins}</span>
+            </div>
+            <div class="result-stat">
+              <span class="label">Coin balance</span>
+              <span class="value">${save.coins}</span>
+            </div>
           </div>
         </div>
-        <div class="modal-actions">
-          <button class="retry-btn" id="retry-btn" type="button">Retry</button>
-          <button class="menu-home-btn" id="menu-btn" type="button">Main menu</button>
-          <button class="cta-btn" id="cta-btn" type="button">Play full game</button>
-        </div>
+        <footer class="modal-actions">
+          <button class="retry-btn" id="retry-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M19 8a8 8 0 10.5 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M19 3v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Play again
+          </button>
+          <button class="menu-home-btn" id="menu-btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 11l8-7 8 7v9h-6v-6h-4v6H4v-9z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+            </svg>
+            Main menu
+          </button>
+          <button class="cta-btn" id="cta-btn" type="button">
+            Play full game
+          </button>
+        </footer>
       </div>
     `;
     this.root.classList.remove('hidden');
