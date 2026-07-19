@@ -19,7 +19,7 @@ afterEach(() => {
 describe('skin catalog', () => {
   it('has exactly 14 skins with image assets', () => {
     expect(SKIN_CATALOG).toHaveLength(14);
-    expect(SKIN_CATALOG.every((s) => s.asset.startsWith('/assets/skins/') && s.asset.endsWith('.png'))).toBe(true);
+    expect(SKIN_CATALOG.every((s) => s.asset.startsWith('/assets/skins/') && s.asset.endsWith('.webp'))).toBe(true);
     expect(SKIN_CATALOG[0].id).toBe('classic');
     expect(SKIN_CATALOG[0].price).toBe(0);
   });
