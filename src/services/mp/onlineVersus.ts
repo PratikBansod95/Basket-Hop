@@ -34,6 +34,9 @@ export class OnlineVersusSession {
   private pendingTaps: Array<{ seq: number; serverTime: number }> = [];
   private presentation: MpMatchSnapshot | null = null;
   private lastCorrectionPx = 0;
+  private interpolationDelayMs = 100;
+  private renderServerTime = 0;
+  private lastSampleAt = 0;
 
   constructor(
     private mp: MpClient,
@@ -88,6 +91,9 @@ export class OnlineVersusSession {
     this.buffer.clear();
     this.presentation = null;
     this.lastCorrectionPx = 0;
+    this.interpolationDelayMs = 100;
+    this.renderServerTime = 0;
+    this.lastSampleAt = 0;
     this.game.reset();
     this.game.startPlaying();
     this.game.networkMode = 'puppet';
@@ -115,14 +121,37 @@ export class OnlineVersusSession {
 
   /** Interpolate remote/shared presentation state; keep the own ball predicted. */
   sampleRemoteState(nowMs: number): void {
-    void nowMs;
     if (!this.active) return;
     const latest = this.buffer.latest;
     if (!latest) return;
 
-    const delay = this.buffer.recommendedDelayMs(this.mp.getRttMs());
-    const renderServerTime = this.mp.serverNow() - delay;
-    this.presentation = this.buffer.sampleAt(renderServerTime) ?? latest;
+    const targetDelay = this.buffer.recommendedDelayMs(this.mp.getRttMs());
+    const firstSample = this.lastSampleAt === 0;
+    const elapsedMs = firstSample
+      ? 16.7
+      : Math.max(0, Math.min(100, nowMs - this.lastSampleAt));
+    this.lastSampleAt = nowMs;
+    if (firstSample) {
+      this.interpolationDelayMs = targetDelay;
+    } else {
+      const delayBlend = Math.min(1, (elapsedMs / 1_000) * 2);
+      this.interpolationDelayMs +=
+        (targetDelay - this.interpolationDelayMs) * delayBlend;
+    }
+
+    const candidate = this.mp.serverNow() - this.interpolationDelayMs;
+    if (this.renderServerTime === 0) {
+      this.renderServerTime = candidate;
+    } else {
+      // Jitter may increase the desired delay abruptly. Never move presentation
+      // time backward; briefly slow/freeze it while the buffer refills instead.
+      const maxAdvance = elapsedMs * 1.12;
+      this.renderServerTime = Math.max(
+        this.renderServerTime,
+        Math.min(candidate, this.renderServerTime + maxAdvance),
+      );
+    }
+    this.presentation = this.buffer.sampleAt(this.renderServerTime) ?? latest;
   }
 
   handleLocalTap(): void {
@@ -163,7 +192,7 @@ export class OnlineVersusSession {
     return {
       rttMs: this.mp.getRttMs(),
       jitterMs: Math.max(this.mp.getJitterMs(), this.buffer.jitterMs),
-      interpolationMs: this.buffer.recommendedDelayMs(this.mp.getRttMs()),
+      interpolationMs: this.interpolationDelayMs,
       bufferedSnapshots: this.buffer.size,
       correctionPx: this.lastCorrectionPx,
       underrunRate: this.buffer.underrunRate,

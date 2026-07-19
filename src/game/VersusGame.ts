@@ -441,16 +441,19 @@ export class VersusGame {
   ): void {
     const ball = this.balls[index];
     const err = Math.hypot(ball.x - snap.x, ball.y - snap.y);
-    const HARD_ERR = 180;
+    const HARD_ERR = 320;
     const BLEND_ERR = 8;
+    const lifecycleReset =
+      (ball.hasLaunched && !snap.hasLaunched) ||
+      (ball.fallingThrough && !snap.fallingThrough && !snap.scoredThisShot);
 
-    if (!blend || err > HARD_ERR) {
+    if (!blend || err > HARD_ERR || lifecycleReset) {
       this.writeBallFromSnap(index, snap);
       return;
     }
 
     if (err > BLEND_ERR) {
-      const t = Math.min(0.28, 0.12 + err / 1_000);
+      const t = Math.min(0.08, 0.025 + err / 5_000);
       ball.x += (snap.x - ball.x) * t;
       ball.y += (snap.y - ball.y) * t;
       ball.vx += (snap.vx - ball.vx) * t;

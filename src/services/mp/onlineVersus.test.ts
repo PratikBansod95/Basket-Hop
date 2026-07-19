@@ -80,4 +80,56 @@ describe('OnlineVersusSession', () => {
     expect(session.getPresentationSnapshot()).not.toBeNull();
     expect(session.getDiagnostics().bufferedSnapshots).toBe(2);
   });
+
+  it('keeps the slot-one presentation timeline monotonic while jitter delay changes', () => {
+    const sent: MpClientMessage[] = [];
+    let serverNow = 1_200;
+    const mp = {
+      send: (message: MpClientMessage) => sent.push(message),
+      getRttMs: () => 280,
+      getJitterMs: () => 70,
+      serverNow: () => serverNow,
+    } as unknown as MpClient;
+    const game = new VersusGame(new DefaultTapLaunch(), {
+      onScore: vi.fn(),
+      onMatchEnd: vi.fn(),
+      onTap: vi.fn(),
+      onBounce: vi.fn(),
+      onSwoosh: vi.fn(),
+    });
+    const session = new OnlineVersusSession(mp, game, {
+      onCountdown: vi.fn(),
+      onMatchStart: vi.fn(),
+      onMatchEnd: vi.fn(),
+    });
+    session.bindMessage({
+      type: 'match_start',
+      roomId: 'room',
+      yourSlot: 1,
+      youAreHost: false,
+      players: [
+        { playerId: 'one', nickname: 'One', slot: 0 },
+        { playerId: 'two', nickname: 'Two', slot: 1 },
+      ],
+      startAt: 1_000,
+    });
+    session.handleLocalTap();
+    expect(sent).toContainEqual(expect.objectContaining({ type: 'tap', slot: 1 }));
+
+    const sampledTimes: number[] = [];
+    for (let seq = 1; seq <= 8; seq += 1) {
+      const snapshot = state([0, 1], 1_000 + seq * 50);
+      snapshot.seq = seq;
+      snapshot.tick = seq * 3;
+      snapshot.balls[1] = { ...snapshot.balls[1], hasLaunched: true, vy: -500 };
+      serverNow = snapshot.serverTime + 140;
+      session.bindMessage({ type: 'snapshot', state: snapshot });
+      session.sampleRemoteState(seq * 16.7);
+      sampledTimes.push(session.getPresentationSnapshot()!.serverTime);
+    }
+
+    for (let index = 1; index < sampledTimes.length; index += 1) {
+      expect(sampledTimes[index]).toBeGreaterThanOrEqual(sampledTimes[index - 1]!);
+    }
+  });
 });
