@@ -17,8 +17,8 @@ export function drawDangerZones(
     const distTop = ballScreenY - ballRadius - DEATH_MARGIN;
     const distBottom = CANVAS_HEIGHT - DEATH_MARGIN - (ballScreenY + ballRadius);
     const nearest = Math.min(distTop, distBottom);
-    // Skip drawing when far from edges on low/medium — big win mid-flight.
-    if (quality !== 'high' && nearest > 140) return;
+    // Keep the court clean until the ball is actually approaching danger.
+    if (nearest > 190) return;
     if (nearest < 100) {
       urgency = 1 + (1 - Math.max(0, nearest) / 100) * 0.75;
     }
@@ -32,7 +32,6 @@ export function drawDangerZones(
     drawZoneStripes(ctx, 'top', alpha * 0.55);
     drawZoneStripes(ctx, 'bottom', alpha * 0.55);
     drawBoundaryLines(ctx, alpha, quality !== 'low');
-    if (quality === 'high') drawZoneLabels(ctx, alpha);
   } else {
     drawBoundaryLines(ctx, alpha, false);
   }
@@ -103,22 +102,5 @@ function drawBoundaryLines(ctx: CanvasRenderingContext2D, alpha: number, withBlu
   ctx.moveTo(0, yBottom);
   ctx.lineTo(CANVAS_WIDTH, yBottom);
   ctx.stroke();
-  ctx.restore();
-}
-
-function drawZoneLabels(ctx: CanvasRenderingContext2D, alpha: number): void {
-  ctx.save();
-  ctx.font = "700 13px 'DM Sans', system-ui, sans-serif";
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = `rgba(255, 245, 240, ${0.92 * alpha})`;
-  ctx.strokeStyle = `rgba(90, 10, 20, ${0.55 * alpha})`;
-  ctx.lineWidth = 3;
-
-  const label = 'OUT OF BOUNDS';
-  ctx.strokeText(label, CANVAS_WIDTH / 2, 24);
-  ctx.fillText(label, CANVAS_WIDTH / 2, 24);
-  ctx.strokeText(label, CANVAS_WIDTH / 2, CANVAS_HEIGHT - 24);
-  ctx.fillText(label, CANVAS_WIDTH / 2, CANVAS_HEIGHT - 24);
   ctx.restore();
 }

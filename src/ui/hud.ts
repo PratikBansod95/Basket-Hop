@@ -7,6 +7,7 @@ export class Hud {
   private scoreWrap: HTMLElement;
   private zoneLabelEl: HTMLElement;
   private coinsEl: HTMLElement;
+  private coinMeterEl: HTMLElement;
   private streakEl: HTMLElement;
   private hintEl: HTMLElement;
   private staminaEl: HTMLElement;
@@ -22,10 +23,11 @@ export class Hud {
     this.root = document.getElementById(rootId)!;
     this.root.innerHTML = `
       <div class="hud-bar">
+        <div class="hud-zone-label" id="zone-label" aria-hidden="true"></div>
         <div class="hud-score-wrap" id="score-wrap">
+          <span class="hud-score-label">Score</span>
           <span class="hud-score" id="score-pill">0</span>
         </div>
-        <div class="hud-zone-label" id="zone-label" aria-hidden="true"></div>
       </div>
       <div class="coin-meter" id="coin-meter">
         <span class="coin-meter-icon" aria-hidden="true"></span>
@@ -45,6 +47,11 @@ export class Hud {
         </div>
       </div>
       <div class="hint-pill" id="hint-pill">
+        <span class="hint-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 19V6M7 11l5-5 5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
         <span class="hint-text" id="hint">Tap anywhere to play</span>
       </div>
     `;
@@ -52,6 +59,7 @@ export class Hud {
     this.scoreEl = this.root.querySelector('#score-pill')!;
     this.zoneLabelEl = this.root.querySelector('#zone-label')!;
     this.coinsEl = this.root.querySelector('#coin-count')!;
+    this.coinMeterEl = this.root.querySelector('#coin-meter')!;
     this.streakEl = this.root.querySelector('#streak-badge')!;
     this.hintEl = this.root.querySelector('#hint-pill')!;
     this.staminaEl = this.root.querySelector('#stamina-meter')!;
@@ -83,6 +91,11 @@ export class Hud {
     }
 
     if (runCoins !== this.lastCoins) {
+      if (this.lastCoins >= 0 && runCoins > this.lastCoins) {
+        this.coinMeterEl.classList.remove('bump');
+        void this.coinMeterEl.offsetWidth;
+        this.coinMeterEl.classList.add('bump');
+      }
       this.lastCoins = runCoins;
       this.coinsEl.textContent = String(runCoins);
     }

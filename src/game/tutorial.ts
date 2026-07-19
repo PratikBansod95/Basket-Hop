@@ -16,10 +16,10 @@ import type { SaveData } from '../platform/types';
 const TUTORIAL_SIM_DT = 1 / 60;
 const TUTORIAL_SIM_STEPS = 150;
 
-export const TUTORIAL_PROMPT_FIRST = 'Tap again to move ball';
-export const TUTORIAL_PROMPT_SECOND = 'Keep tapping on screen to control the ball';
+export const TUTORIAL_PROMPT_FIRST = 'Tap again to steer the ball';
+export const TUTORIAL_PROMPT_SECOND = 'Keep tapping to guide the ball';
 export const TUTORIAL_MAX_STEPS = 2;
-export const STAMINA_TUTORIAL_PROMPT = 'Every Tap will Cost Stamina Now\nPlay Carefully';
+export const STAMINA_TUTORIAL_PROMPT = 'Each mid-air tap uses stamina\nTime your moves';
 
 export interface TutorialProbeState {
   phase: GamePhase;
