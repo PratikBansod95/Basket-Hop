@@ -1,4 +1,4 @@
-import { CANVAS_WIDTH, COIN_RADIUS, COIN_VALUE, HOOP_CLEARANCE, HOOP_SCREEN_Y } from './constants';
+import { CANVAS_WIDTH, COIN_RADIUS, COIN_VALUE, HOOP_CLEARANCE } from './constants';
 import { HOOP_GEOMETRY } from './palette';
 import type { Coin, Hoop } from './types';
 
@@ -182,7 +182,7 @@ function pickSecondLanePoint(
 export function generateCoinsForHoop(
   hoop: Hoop,
   level: number,
-  climbOffset: number,
+  _climbOffset: number,
   random: CoinRandom = Math.random,
 ): Coin[] {
   if (level < 1) return [];
@@ -205,7 +205,7 @@ export function generateCoinsForHoop(
   return points.map((point, index) => ({
     id: `coin-${level}-${hoop.side}-${index}-${Math.floor(random() * 1_000_000)}`,
     x: laneXToWorld(point.laneX, hoop.side),
-    y: HOOP_SCREEN_Y + point.yOffset - climbOffset,
+    y: hoop.y + point.yOffset,
     radius: COIN_RADIUS,
     value: COIN_VALUE,
     collected: false,

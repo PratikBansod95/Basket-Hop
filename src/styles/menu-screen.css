@@ -120,8 +120,8 @@
 .menu-storefront-btn {
   position: absolute;
   z-index: 6;
-  left: clamp(14px, 3.5cqw, 20px);
-  top: clamp(70px, 9cqh, 82px);
+  right: clamp(10px, 2.8cqw, 16px);
+  top: clamp(270px, 31cqh, 390px);
   width: clamp(58px, 14cqw, 68px);
   min-width: var(--touch-min);
   min-height: var(--touch-min);
@@ -229,7 +229,7 @@
 .menu-logo {
   position: relative;
   z-index: 4;
-  width: min(96%, 440px);
+  width: min(98%, 520px);
   margin: clamp(2px, 0.6cqh, 6px) auto 0;
   text-align: center;
   pointer-events: none;
@@ -242,7 +242,7 @@
   gap: clamp(8px, 2cqw, 12px);
   margin: 0 0 clamp(4px, 1cqh, 8px);
   font-family: var(--font-body);
-  font-size: clamp(10px, 2.4cqw, 12px);
+  font-size: clamp(11px, 2.8cqw, 14px);
   font-weight: 700;
   letter-spacing: 0.34em;
   text-transform: uppercase;
@@ -296,7 +296,7 @@
 .menu-logo-basket {
   display: block;
   font-family: var(--font-display);
-  font-size: clamp(40px, 11cqw, 56px);
+  font-size: clamp(48px, 13cqw, 68px);
   font-style: italic;
   letter-spacing: 0.08em;
   padding-right: 0.08em;
@@ -319,7 +319,7 @@
 .menu-logo-hop-shadow {
   display: block;
   font-family: 'Permanent Marker', cursive;
-  font-size: clamp(54px, 15cqw, 78px);
+  font-size: clamp(68px, 19cqw, 96px);
   line-height: 0.95;
   letter-spacing: 0.04em;
 }
@@ -366,7 +366,7 @@
   gap: clamp(10px, 3cqw, 18px);
   margin: clamp(10px, 2cqh, 16px) 0 0;
   font-family: var(--font-display);
-  font-size: clamp(11px, 2.8cqw, 13px);
+  font-size: clamp(13px, 3.2cqw, 16px);
   letter-spacing: 0.18em;
   color: rgba(255, 248, 240, 0.78);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
@@ -957,12 +957,12 @@
   }
 
   .menu-logo-basket {
-    font-size: clamp(28px, 8cqw, 40px);
+    font-size: clamp(34px, 9.5cqw, 46px);
   }
 
   .menu-logo-hop,
   .menu-logo-hop-shadow {
-    font-size: clamp(40px, 11cqw, 54px);
+    font-size: clamp(48px, 13cqw, 62px);
   }
 
   .menu-logo-tagline {
@@ -1006,7 +1006,7 @@
 
   .menu-storefront-btn {
     width: clamp(50px, 12cqw, 58px);
-    top: clamp(56px, 8cqh, 68px);
+    top: clamp(205px, 31cqh, 245px);
   }
 }
 

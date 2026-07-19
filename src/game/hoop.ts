@@ -1,11 +1,23 @@
-import { CANVAS_WIDTH, hoopWorldY, HOOP_LEFT_X, HOOP_RIGHT_X, HOOP_SLIDE_DURATION } from './constants';
+import {
+  CANVAS_WIDTH,
+  hoopWorldY,
+  HOOP_LEFT_X,
+  HOOP_RIGHT_X,
+  HOOP_SCREEN_Y,
+  HOOP_SLIDE_DURATION,
+} from './constants';
 import { hoopXForSide } from './collision';
 import type { Hoop, HoopSide } from './types';
+
+export const HOOP_MIN_SCREEN_Y = 220;
+export const HOOP_MAX_SCREEN_Y = 880;
+const MAX_HEIGHT_CHANGE = 340;
+const hoopScreenHeights = new WeakMap<Hoop, number>();
 
 export function createHoop(side: HoopSide = 'right', climbOffset: number): Hoop {
   const y = hoopWorldY(climbOffset);
   const x = hoopXForSide(side);
-  return {
+  const hoop: Hoop = {
     side,
     x,
     y,
@@ -18,18 +30,40 @@ export function createHoop(side: HoopSide = 'right', climbOffset: number): Hoop 
     tiltVel: 0,
     animating: false,
   };
+  hoopScreenHeights.set(hoop, HOOP_SCREEN_Y);
+  return hoop;
 }
 
 export function flipHoopSide(side: HoopSide): HoopSide {
   return side === 'left' ? 'right' : 'left';
 }
 
-/** Next basket: opposite corner, fixed screen height via scroll. */
-export function onBasket(hoop: Hoop, climbOffset: number): void {
+/** Next basket: opposite side with a reachable, varied screen height. */
+export function onBasket(hoop: Hoop, climbOffset: number, random?: () => number): void {
   const newSide = flipHoopSide(hoop.side);
-  const newY = hoopWorldY(climbOffset);
+  const previousScreenY = hoopScreenHeights.get(hoop) ?? HOOP_SCREEN_Y;
+  const sampledScreenY = random
+    ? HOOP_MIN_SCREEN_Y +
+      Math.max(0, Math.min(1, random())) * (HOOP_MAX_SCREEN_Y - HOOP_MIN_SCREEN_Y)
+    : HOOP_SCREEN_Y;
+  const nextScreenY = random
+    ? Math.round(
+        Math.max(
+          HOOP_MIN_SCREEN_Y,
+          Math.min(
+            HOOP_MAX_SCREEN_Y,
+            Math.max(
+              previousScreenY - MAX_HEIGHT_CHANGE,
+              Math.min(previousScreenY + MAX_HEIGHT_CHANGE, sampledScreenY),
+            ),
+          ),
+        ),
+      )
+    : HOOP_SCREEN_Y;
+  const newY = nextScreenY - climbOffset;
   const newX = newSide === 'left' ? HOOP_LEFT_X : HOOP_RIGHT_X;
 
+  hoopScreenHeights.set(hoop, nextScreenY);
   hoop.side = newSide;
   hoop.targetX = newX;
   hoop.targetY = newY;
@@ -46,7 +80,7 @@ export function onBasket(hoop: Hoop, climbOffset: number): void {
 /** Keep hoop locked to screen height as camera scrolls. */
 export function syncHoopToCamera(hoop: Hoop, climbOffset: number): void {
   if (hoop.animating) return;
-  const y = hoopWorldY(climbOffset);
+  const y = (hoopScreenHeights.get(hoop) ?? HOOP_SCREEN_Y) - climbOffset;
   hoop.y = y;
   hoop.targetY = y;
 }

@@ -567,7 +567,7 @@ export class Game {
         this.targetClimbOffset += CLIMB_PER_BASKET;
         this.climbAnimating = true;
 
-        onBasket(this.hoop, this.targetClimbOffset);
+        onBasket(this.hoop, this.targetClimbOffset, Math.random);
         this.coins = [];
         this.pendingCoinRespawn = true;
         resetHoopNet(this.hoop);

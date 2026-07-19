@@ -174,6 +174,8 @@ function resolveHoopHits(
     } else if (key === 'backboard') {
       if (hit.normalX !== 0) ball.vx = -ball.vx * BOUNCE_COEF;
       if (hit.normalY !== 0) ball.vy = -ball.vy * BOUNCE_COEF;
+      // A bank shot can score, but it is not a clean swish.
+      ball.hitRimThisShot = true;
     } else {
       if (hit.normalX !== 0) ball.vx = -ball.vx * BOUNCE_COEF;
       if (hit.normalY !== 0) ball.vy = -ball.vy * BOUNCE_COEF;
