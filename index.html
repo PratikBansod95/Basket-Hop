@@ -55,6 +55,7 @@
 
         <button id="menu-shop-btn" class="menu-storefront-btn" type="button" aria-label="Sports shop — buy ball skins">
           <img src="/assets/sports-shop-icon.png" alt="" width="128" height="128" draggable="false" />
+          <span>Shop</span>
         </button>
 
         <header class="menu-logo" aria-label="Basket Hop">
@@ -88,9 +89,10 @@
                   <path d="M12 11v3M9 20h6M10 14h4l1 6H9l1-6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </div>
-              <p class="menu-stat-label">Best score</p>
-              <p class="menu-stat-value" id="menu-best-score">0</p>
-              <span class="menu-stat-underline" aria-hidden="true"></span>
+              <div class="menu-stat-copy">
+                <p class="menu-stat-label">Personal best</p>
+                <p class="menu-stat-value" id="menu-best-score">0</p>
+              </div>
             </div>
 
             <div class="menu-stat-divider" aria-hidden="true"></div>
@@ -99,9 +101,10 @@
               <div class="menu-stat-icon menu-stat-icon--coin" aria-hidden="true">
                 <span class="menu-stat-coin-face"></span>
               </div>
-              <p class="menu-stat-label">Total coins</p>
-              <p class="menu-stat-value" id="menu-coins">0</p>
-              <span class="menu-stat-underline" aria-hidden="true"></span>
+              <div class="menu-stat-copy">
+                <p class="menu-stat-label">Coin balance</p>
+                <p class="menu-stat-value" id="menu-coins">0</p>
+              </div>
             </div>
           </section>
 
@@ -112,7 +115,10 @@
                 <path d="M16 3v26M6 10c4 3 16 3 20 0M6 22c4-3 16-3 20 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
               </svg>
             </span>
-            <span class="menu-start-label">Start game</span>
+            <span class="menu-start-copy">
+              <span class="menu-start-kicker">Solo run</span>
+              <span class="menu-start-label">Play now</span>
+            </span>
             <span class="menu-start-arrow" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none">
                 <path d="M10 7l5 5-5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
