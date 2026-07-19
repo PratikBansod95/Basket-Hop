@@ -138,13 +138,8 @@ body {
 #app.in-game .hud-score-wrap,
 #app.in-game .coin-meter,
 #app.in-game .stamina-meter,
-#app.in-game .streak-badge,
-#app.in-game .hint-pill {
+#app.in-game .streak-badge {
   box-shadow: none;
-}
-
-#app.in-game .hint-pill {
-  animation: none;
 }
 
 #app.in-game .coin-meter-icon,
@@ -296,11 +291,11 @@ body {
 .hud-bar {
   position: absolute;
   top: clamp(12px, 1.8cqh, 18px);
-  left: 50%;
-  transform: translateX(-50%);
+  left: clamp(12px, 3cqw, 18px);
+  transform: none;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 0;
 }
@@ -308,8 +303,8 @@ body {
 .hud-zone-label {
   position: absolute;
   top: calc(100% + 5px);
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  transform: none;
   z-index: 2;
   min-height: 22px;
   display: flex;
@@ -337,10 +332,10 @@ body {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-width: clamp(92px, 21cqw, 108px);
-  min-height: clamp(54px, 11cqw, 60px);
-  padding: 7px 20px 8px;
-  border-radius: 18px;
+  min-width: clamp(68px, 15cqw, 80px);
+  min-height: clamp(48px, 10cqw, 54px);
+  padding: 6px 14px 7px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(19, 36, 61, 0.08);
   box-shadow:
@@ -411,7 +406,7 @@ body {
   position: relative;
   z-index: 1;
   font-family: var(--font-display);
-  font-size: clamp(30px, 6.5cqw, 37px);
+  font-size: clamp(27px, 5.8cqw, 33px);
   line-height: 0.92;
   letter-spacing: 0.03em;
   font-variant-numeric: tabular-nums;
@@ -526,8 +521,8 @@ body {
 .stamina-meter {
   position: absolute;
   top: clamp(14px, 2cqh, 20px);
-  left: clamp(12px, 3cqw, 18px);
-  width: min(34cqw, 174px);
+  left: 50%;
+  width: min(40cqw, 190px);
   padding: 9px 11px;
   border-radius: 15px;
   background: rgba(255, 255, 255, 0.92);
@@ -536,7 +531,7 @@ body {
     0 10px 24px rgba(0, 0, 0, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translate(-50%, -8px);
   transition:
     opacity 0.2s var(--ease-out),
     transform 0.2s var(--ease-out),
@@ -546,7 +541,7 @@ body {
 
 .stamina-meter.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, 0);
 }
 
 .stamina-meter.intro {
@@ -617,30 +612,31 @@ body {
 
 @keyframes stamina-flash {
   0% {
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, 0) scale(1);
   }
   45% {
-    transform: translateY(0) scale(1.03);
+    transform: translate(-50%, 0) scale(1.03);
   }
   100% {
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, 0) scale(1);
   }
 }
 
 @keyframes stamina-intro-pulse {
   0%,
   100% {
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, 0) scale(1);
   }
   50% {
-    transform: translateY(0) scale(1.03);
+    transform: translate(-50%, 0) scale(1.03);
   }
 }
 
 .hint-pill {
   position: absolute;
+  isolation: isolate;
   left: 50%;
-  top: clamp(108px, 12cqh, 122px);
+  top: clamp(84px, 10cqh, 98px);
   bottom: auto;
   transform: translateX(-50%);
   display: inline-flex;
@@ -654,13 +650,24 @@ body {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(19, 36, 61, 0.08);
   box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  animation: hint-float 2.4s ease-in-out infinite;
+    0 10px 24px rgba(19, 36, 61, 0.14),
+    0 0 0 3px rgba(255, 106, 19, 0.1);
+  animation: hint-breathe 2.2s ease-in-out infinite;
+}
+
+.hint-pill::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  z-index: -1;
+  border: 2px solid rgba(255, 106, 19, 0.34);
+  border-radius: 20px;
+  pointer-events: none;
+  animation: hint-ring 2.2s ease-out infinite;
 }
 
 .hint-pill.tutorial-prompt {
-  top: clamp(108px, 12cqh, 122px);
+  top: clamp(84px, 10cqh, 98px);
   bottom: auto;
   max-width: min(84cqw, 350px);
   min-height: 46px;
@@ -671,9 +678,9 @@ body {
   border: 1px solid rgba(19, 36, 61, 0.08);
   border-radius: 16px;
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  animation: none;
+    0 10px 24px rgba(19, 36, 61, 0.14),
+    0 0 0 3px rgba(255, 106, 19, 0.1);
+  animation: hint-breathe 2.2s ease-in-out infinite;
 }
 
 .hint-pill.tutorial-prompt .hint-text {
@@ -714,15 +721,25 @@ body {
   color: var(--menu-navy);
 }
 
-@keyframes hint-float {
+@keyframes hint-breathe {
   0%,
   100% {
-    opacity: 0.72;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) scale(1);
   }
   50% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-4px);
+    transform: translateX(-50%) scale(1.025);
+  }
+}
+
+@keyframes hint-ring {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
+  65%,
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
   }
 }
 
@@ -1441,7 +1458,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .menu-screen-bg,
-  .menu-logo-hop {
+  .menu-logo-hop,
+  .hint-pill,
+  .hint-pill::before {
     animation: none !important;
   }
 }
