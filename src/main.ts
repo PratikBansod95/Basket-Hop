@@ -189,10 +189,6 @@ async function main(): Promise<void> {
     }
     ctx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
     menuFxCtx.setTransform(layout.dpr, 0, 0, layout.dpr, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    menuFxCtx.imageSmoothingEnabled = true;
-    menuFxCtx.imageSmoothingQuality = 'high';
   }
 
   function setMenuFxVisible(visible: boolean): void {

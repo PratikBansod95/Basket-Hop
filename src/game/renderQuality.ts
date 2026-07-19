@@ -126,9 +126,7 @@ export function cappedDevicePixelRatio(): number {
   if (typeof window === 'undefined') return 1;
   const q = getRenderQuality();
   const raw = window.devicePixelRatio || 1;
-  // 1.35 was visibly under-resolved on common 2.5–3× phone displays,
-  // especially around the rotating ball's clipped edge.
-  if (q === 'low') return Math.min(raw, 1.5);
-  if (q === 'medium') return Math.min(raw, 1.85);
+  if (q === 'low') return Math.min(raw, 1.35);
+  if (q === 'medium') return Math.min(raw, 1.75);
   return Math.min(raw, 2.25);
 }
