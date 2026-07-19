@@ -248,24 +248,33 @@
 
       <div id="nickname-screen" class="menu-overlay nickname-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="nickname-title">
         <div class="nickname-card ui-panel">
-          <p class="nickname-kicker">Welcome to the court</p>
-          <h2 class="nickname-title" id="nickname-title">Choose your nickname</h2>
-          <p class="nickname-copy">This name shows on the global leaderboard when you hop high.</p>
-          <div class="nickname-tips" aria-hidden="true">
-            <span class="nickname-tip">3–8 characters</span>
-            <span class="nickname-tip">Letters and numbers</span>
+          <header class="nickname-header">
+            <p class="nickname-kicker"><span aria-hidden="true"></span> Player profile</p>
+            <h2 class="nickname-title" id="nickname-title">Pick your court name</h2>
+            <p class="nickname-copy">This is how other players will see you on the global leaderboard.</p>
+          </header>
+          <div class="nickname-field">
+            <div class="nickname-label-row">
+              <label for="nicknameInput">Your nickname</label>
+              <span id="nicknameCount" class="nickname-count" aria-live="polite">0 / 8</span>
+            </div>
+            <input
+              id="nicknameInput"
+              class="nickname-input"
+              type="text"
+              inputmode="text"
+              maxlength="8"
+              autocomplete="nickname"
+              placeholder="HopStar"
+              aria-describedby="nicknameRules nicknameError nicknameNote"
+            />
+            <div id="nicknameRules" class="nickname-tips">
+              <span class="nickname-tip">3–8 characters</span>
+              <span class="nickname-tip">Letters, numbers, _ or -</span>
+            </div>
           </div>
-          <input
-            id="nicknameInput"
-            class="nickname-input"
-            type="text"
-            inputmode="text"
-            maxlength="8"
-            autocomplete="nickname"
-            placeholder="HopStar"
-          />
           <p id="nicknameError" class="nickname-error hidden" aria-live="polite"></p>
-          <p class="nickname-note">You only need to do this once on this device.</p>
+          <p id="nicknameNote" class="nickname-note"><span aria-hidden="true">✓</span> Saved on this device after setup</p>
           <button id="nicknameSubmit" class="ui-btn ui-btn-primary nickname-submit" type="button">
             Save and play
           </button>
