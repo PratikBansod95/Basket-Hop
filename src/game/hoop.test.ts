@@ -14,11 +14,11 @@ describe('hoop height variation', () => {
     const hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
     const climbOffset = INITIAL_CLIMB_OFFSET + 240;
 
-    onBasket(hoop, climbOffset, () => 0);
+    onBasket(hoop, climbOffset, 60, () => 0);
     expect(hoop.targetY + climbOffset).toBe(HOOP_MIN_SCREEN_Y);
 
-    onBasket(hoop, climbOffset + 240, () => 1);
-    onBasket(hoop, climbOffset + 480, () => 1);
+    onBasket(hoop, climbOffset + 240, 60, () => 1);
+    onBasket(hoop, climbOffset + 480, 60, () => 1);
     expect(hoop.targetY + climbOffset + 480).toBe(HOOP_MAX_SCREEN_Y);
   });
 
@@ -26,7 +26,7 @@ describe('hoop height variation', () => {
     const hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
     const climbOffset = INITIAL_CLIMB_OFFSET + 240;
 
-    onBasket(hoop, climbOffset, () => 0.8);
+    onBasket(hoop, climbOffset, 10, () => 0.8);
     updateHoop(hoop, 1);
     const chosenScreenY = hoop.y + climbOffset;
 

@@ -54,4 +54,12 @@ describe('clean-shot scoring', () => {
       displayText: '+1',
     });
   });
+
+  it('accepts a downward crossing that begins near the shot apex', () => {
+    const hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
+    const ball = createCrossingBall();
+    ball.frameStartVelY = -5;
+
+    expect(checkScore(ball, hoop)?.scored).toBe(true);
+  });
 });

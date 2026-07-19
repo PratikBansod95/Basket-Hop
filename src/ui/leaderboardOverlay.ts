@@ -12,6 +12,7 @@ const AVATAR_PALETTE = [
   '#e67e22',
   '#34495e',
 ];
+const LEADERBOARD_TIMEOUT_MS = 10_000;
 
 function getInitial(name: string): string {
   return name.trim().charAt(0).toUpperCase() || '?';
@@ -86,6 +87,7 @@ export class LeaderboardOverlay {
   private visible = false;
   private opening = false;
   private lastOpenAt = 0;
+  private requestController: AbortController | null = null;
 
   constructor(private getSave: () => SaveData) {
     this.root = document.getElementById('leaderboard-screen')!;
@@ -122,6 +124,9 @@ export class LeaderboardOverlay {
 
   hide(): void {
     this.visible = false;
+    this.requestController?.abort();
+    this.requestController = null;
+    this.setLoading(false);
     this.root.classList.add('hidden');
   }
 
@@ -153,12 +158,23 @@ export class LeaderboardOverlay {
   }
 
   async refresh(): Promise<void> {
+    this.requestController?.abort();
+    const controller = new AbortController();
+    this.requestController = controller;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, LEADERBOARD_TIMEOUT_MS);
+
     this.setLoading(true);
     this.setError('');
+    this.list.replaceChildren();
     const save = this.getSave();
 
     try {
-      const data = await fetchLeaderboard(save.playerId, 100);
+      const data = await fetchLeaderboard(save.playerId, 100, controller.signal);
+      if (this.requestController !== controller || controller.signal.aborted) return;
       if (data.entries.length === 0 && !data.playerEntry) {
         this.list.replaceChildren(
           createEmptyState('No scores yet. Be the first hopper on the board.'),
@@ -167,12 +183,21 @@ export class LeaderboardOverlay {
       }
       this.render(data.entries, data.playerEntry, save.playerId);
     } catch (error) {
+      if (controller.signal.aborted && !timedOut) return;
       const message =
-        error instanceof Error ? error.message : 'Could not load leaderboard right now.';
-      this.list.replaceChildren(createEmptyState(message));
+        timedOut
+          ? 'Ranks took too long to load. Please try again.'
+          : error instanceof Error
+            ? error.message
+            : 'Could not load leaderboard right now.';
+      this.list.replaceChildren();
       this.setError(message);
     } finally {
-      this.setLoading(false);
+      window.clearTimeout(timeout);
+      if (this.requestController === controller) {
+        this.requestController = null;
+        this.setLoading(false);
+      }
     }
   }
 }

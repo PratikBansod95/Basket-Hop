@@ -20,8 +20,7 @@ export function checkScore(ball: Ball, hoop: Hoop): ScoreResult | null {
 
   if (
     prevTop < rimLine &&
-    currTop >= rimLine &&
-    ball.frameStartVelY > 0
+    currTop >= rimLine
   ) {
     const t = (rimLine - prevTop) / (currTop - prevTop);
     const cx = ball.frameStartX + (ball.x - ball.frameStartX) * t;

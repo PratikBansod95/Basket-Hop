@@ -7,10 +7,11 @@ import {
   HOOP_SLIDE_DURATION,
 } from './constants';
 import { hoopXForSide } from './collision';
+import { DIFFICULTY_TIERS, tierForScore } from './palette';
 import type { Hoop, HoopSide } from './types';
 
-export const HOOP_MIN_SCREEN_Y = 220;
-export const HOOP_MAX_SCREEN_Y = 880;
+export const HOOP_MIN_SCREEN_Y = DIFFICULTY_TIERS.at(-1)!.minY;
+export const HOOP_MAX_SCREEN_Y = DIFFICULTY_TIERS.at(-1)!.maxY;
 const MAX_HEIGHT_CHANGE = 340;
 const hoopScreenHeights = new WeakMap<Hoop, number>();
 
@@ -38,20 +39,25 @@ export function flipHoopSide(side: HoopSide): HoopSide {
   return side === 'left' ? 'right' : 'left';
 }
 
-/** Next basket: opposite side with a reachable, varied screen height. */
-export function onBasket(hoop: Hoop, climbOffset: number, random?: () => number): void {
+/** Next basket: opposite side with progressively broader, reachable heights. */
+export function onBasket(
+  hoop: Hoop,
+  climbOffset: number,
+  score = 0,
+  random?: () => number,
+): void {
   const newSide = flipHoopSide(hoop.side);
   const previousScreenY = hoopScreenHeights.get(hoop) ?? HOOP_SCREEN_Y;
+  const tier = tierForScore(score);
   const sampledScreenY = random
-    ? HOOP_MIN_SCREEN_Y +
-      Math.max(0, Math.min(1, random())) * (HOOP_MAX_SCREEN_Y - HOOP_MIN_SCREEN_Y)
+    ? tier.minY + Math.max(0, Math.min(1, random())) * (tier.maxY - tier.minY)
     : HOOP_SCREEN_Y;
   const nextScreenY = random
     ? Math.round(
         Math.max(
-          HOOP_MIN_SCREEN_Y,
+          tier.minY,
           Math.min(
-            HOOP_MAX_SCREEN_Y,
+            tier.maxY,
             Math.max(
               previousScreenY - MAX_HEIGHT_CHANGE,
               Math.min(previousScreenY + MAX_HEIGHT_CHANGE, sampledScreenY),
