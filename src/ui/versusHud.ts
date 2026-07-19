@@ -57,6 +57,11 @@ export class VersusHud {
     this.hintEl.textContent = hint;
   }
 
+  setStatus(text: string): void {
+    this.hintEl.textContent = text;
+    this.hintEl.style.display = 'block';
+  }
+
   setPing(rttMs: number | null): void {
     if (rttMs === null || !Number.isFinite(rttMs)) {
       this.pingEl.classList.add('hidden');
@@ -69,6 +74,25 @@ export class VersusHud {
     this.pingEl.textContent = `${ms} ms`;
     this.pingEl.classList.remove('hidden');
     this.pingEl.classList.toggle('is-high', ms >= 120);
+  }
+
+  setNetworkStats(stats: {
+    rttMs: number;
+    jitterMs: number;
+    interpolationMs: number;
+    bufferedSnapshots: number;
+    correctionPx: number;
+    underrunRate: number;
+  }): void {
+    const ms = Math.round(stats.rttMs);
+    const jitter = Math.round(stats.jitterMs);
+    const interpolation = Math.round(stats.interpolationMs);
+    this.lastPing = ms;
+    this.pingEl.textContent =
+      `${ms} ms · jitter ${jitter} · buffer ${interpolation} · ` +
+      `${stats.bufferedSnapshots} snaps · correction ${Math.round(stats.correctionPx)} px`;
+    this.pingEl.classList.remove('hidden');
+    this.pingEl.classList.toggle('is-high', ms >= 120 || stats.underrunRate >= 0.01);
   }
 
   update(scoreP1: number, scoreP2: number, timeLeft: number, phase: string, anyLaunched: boolean): void {

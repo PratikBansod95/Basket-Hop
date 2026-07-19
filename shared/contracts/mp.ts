@@ -1,6 +1,6 @@
 /** Shared multiplayer protocol (client <-> Railway WS server). */
 
-export const MP_PROTOCOL_VERSION = 3;
+export const MP_PROTOCOL_VERSION = 4;
 
 export interface MpPlayerInfo {
   playerId: string;
@@ -36,8 +36,12 @@ export interface MpHoopSnap {
 
 export interface MpMatchSnapshot {
   seq: number;
-  /** Host performance.now() at publish — used for guest interpolation. */
+  /** Authoritative 60 Hz simulation tick. */
+  tick: number;
+  /** Server Unix time in milliseconds at publish. */
   serverTime: number;
+  /** Highest tap sequence applied for each player. */
+  ackTapSeq: [number, number];
   timeLeft: number;
   scoreP1: number;
   scoreP2: number;
@@ -57,7 +61,7 @@ export interface MpMatchResult {
 
 /** Client → server */
 export type MpClientMessage =
-  | { type: 'hello'; protocol: number; playerId: string }
+  | { type: 'hello'; protocol: number; playerId: string; resumeToken?: string }
   | { type: 'heartbeat'; clientTime: number }
   | { type: 'queue' }
   | { type: 'queue_cancel' }
@@ -70,7 +74,7 @@ export type MpClientMessage =
 
 /** Server → client */
 export type MpServerMessage =
-  | { type: 'welcome'; playerId: string; nickname: string }
+  | { type: 'welcome'; playerId: string; nickname: string; resumeToken: string }
   | { type: 'error'; code: string; message: string }
   | { type: 'queued' }
   | { type: 'queue_left' }
@@ -84,7 +88,7 @@ export type MpServerMessage =
     }
   | { type: 'room_left' }
   | { type: 'peer_left'; playerId: string; nickname: string }
-  | { type: 'pong'; clientTime: number }
+  | { type: 'pong'; clientTime: number; serverTime: number }
   | { type: 'match_countdown'; seconds: number; players: MpPlayerInfo[] }
   | {
       type: 'match_start';
@@ -92,6 +96,7 @@ export type MpServerMessage =
       yourSlot: 0 | 1;
       youAreHost: boolean;
       players: MpPlayerInfo[];
+      startAt: number;
     }
   | { type: 'tap'; slot: 0 | 1; seq: number; clientTime: number }
   | { type: 'snapshot'; state: MpMatchSnapshot }

@@ -16,7 +16,7 @@ import { resolveBallBallCollision } from './ballBallCollision';
 import { createHoop, onBasket, syncHoopToCamera, updateHoop } from './hoop';
 import { resetHoopNet, updateHoopNet } from './netPhysics';
 import type { LaunchMechanic } from './mechanics/LaunchMechanic';
-import { clampDt, integrateBall } from './physics';
+import { clampDt, FIXED_DT, integrateBall } from './physics';
 import { clearParticles, spawnBurst, spawnSwishFlash, updateParticles } from './particles';
 import { checkScore } from './scoring';
 import { getRenderQuality } from './renderQuality';
@@ -95,6 +95,7 @@ export class VersusGame {
    */
   networkMode: 'authority' | 'puppet' = 'authority';
   puppetOwnSlot: VersusPlayerId = 0;
+  effectsEnabled = true;
 
   constructor(
     private launchMechanic: LaunchMechanic,
@@ -140,7 +141,7 @@ export class VersusGame {
     this.bounceCooldown = 0;
     this.clearBelowY = [0, 0];
     resetHoopNet(this.hoop);
-    clearParticles();
+    if (this.effectsEnabled) clearParticles();
     this.launchMechanic.reset();
     this.syncRenderPrev();
   }
@@ -200,12 +201,19 @@ export class VersusGame {
     return this.shake;
   }
 
-  exportSnapshot(seq: number, serverTime = performance.now()): import('../../shared/contracts/mp').MpMatchSnapshot {
+  exportSnapshot(
+    seq: number,
+    tick = 0,
+    serverTime = Date.now(),
+    ackTapSeq: [number, number] = [0, 0],
+  ): import('../../shared/contracts/mp').MpMatchSnapshot {
     const r1 = (n: number) => Math.round(n * 10) / 10;
     const r2 = (n: number) => Math.round(n * 100) / 100;
     return {
       seq,
+      tick,
       serverTime,
+      ackTapSeq,
       timeLeft: r2(this.timeLeft),
       scoreP1: this.scoreP1,
       scoreP2: this.scoreP2,
@@ -257,6 +265,118 @@ export class VersusGame {
     // Full overwrite both balls (local tooling / hard reset).
     this.writeBallFromSnap(0, state.balls[0]);
     this.writeBallFromSnap(1, state.balls[1]);
+  }
+
+  /** Start a synchronized versus match without waiting for the first tap. */
+  startPlaying(): void {
+    if (!this.ended) this.phase = GamePhase.Playing;
+  }
+
+  /**
+   * Apply only authoritative shared/opponent state. The locally predicted ball
+   * remains untouched until its inputs have been acknowledged.
+   */
+  applyAuthoritativeRemote(
+    state: import('../../shared/contracts/mp').MpMatchSnapshot,
+    ownSlot: VersusPlayerId,
+    reconcileOwn: boolean,
+  ): number {
+    this.phase = GamePhase.Playing;
+    this.timeLeft = state.timeLeft;
+    this.scoreP1 = state.scoreP1;
+    this.scoreP2 = state.scoreP2;
+    this.climbOffset = state.climbOffset;
+    this.targetClimbOffset = state.targetClimbOffset;
+    this.climbAnimating = state.climbAnimating;
+    Object.assign(this.hoop, state.hoop);
+
+    const remoteSlot: VersusPlayerId = ownSlot === 0 ? 1 : 0;
+    this.writeBallFromSnap(remoteSlot, state.balls[remoteSlot]);
+    if (!reconcileOwn) return 0;
+
+    const ownSnap = state.balls[ownSlot];
+    const ownBall = this.balls[ownSlot];
+    const error = Math.hypot(ownBall.x - ownSnap.x, ownBall.y - ownSnap.y);
+    this.reconcileOwnBall(ownSlot, ownSnap, true);
+    return error;
+  }
+
+  /**
+   * Rebuild the predicted local ball from an authoritative snapshot, replaying
+   * every input the server has not acknowledged yet.
+   */
+  reconcileOwnWithPending(
+    state: import('../../shared/contracts/mp').MpMatchSnapshot,
+    ownSlot: VersusPlayerId,
+    pending: ReadonlyArray<{ seq: number; serverTime: number }>,
+    serverNow: number,
+  ): number {
+    const source = state.balls[ownSlot];
+    const current = this.balls[ownSlot];
+    const target: Ball = {
+      ...current,
+      ...source,
+      radius: current.radius,
+      frameStartX: source.x,
+      frameStartY: source.y,
+      frameStartVelY: source.vy,
+      comboAtShot: 0,
+    };
+    const projectedHoop: Hoop = { ...this.hoop };
+    const projectedColliders = createColliders();
+    let cursor = state.serverTime;
+    const endAt = Math.max(cursor, Math.min(serverNow, cursor + 250));
+    const advanceTo = (targetTime: number) => {
+      let remaining = Math.max(0, targetTime - cursor) / 1000;
+      while (remaining > 0.0001) {
+        const dt = Math.min(FIXED_DT, remaining);
+        integrateBall(
+          target,
+          projectedHoop,
+          projectedColliders,
+          dt,
+          () => {
+            target.hitRimThisShot = true;
+          },
+          () => {},
+          !target.hasLaunched,
+        );
+        remaining -= dt;
+      }
+      cursor = targetTime;
+    };
+
+    for (const tap of pending) {
+      if (tap.serverTime > endAt) continue;
+      const tapAt = Math.max(cursor, Math.min(endAt, tap.serverTime));
+      advanceTo(tapAt);
+      this.launchMechanic.onTap({
+        ball: target,
+        hoop: projectedHoop,
+        isFirstTap: !target.hasLaunched,
+        staminaStrength: 1,
+      });
+      if (target.hasLaunched) {
+        target.hitRimThisShot = false;
+        target.scoredThisShot = false;
+      }
+    }
+    advanceTo(endAt);
+
+    const projected: import('../../shared/contracts/mp').MpBallSnap = {
+      x: target.x,
+      y: target.y,
+      vx: target.vx,
+      vy: target.vy,
+      rotation: target.rotation,
+      hasLaunched: target.hasLaunched,
+      fallingThrough: target.fallingThrough,
+      scoredThisShot: target.scoredThisShot,
+      hitRimThisShot: target.hitRimThisShot,
+    };
+    const error = Math.hypot(current.x - target.x, current.y - target.y);
+    this.reconcileOwnBall(ownSlot, projected, true);
+    return error;
   }
 
   /**
@@ -318,8 +438,8 @@ export class VersusGame {
   ): void {
     const ball = this.balls[index];
     const err = Math.hypot(ball.x - snap.x, ball.y - snap.y);
-    const HARD_ERR = 48;
-    const BLEND_ERR = 12;
+    const HARD_ERR = 180;
+    const BLEND_ERR = 8;
 
     if (!blend || err > HARD_ERR) {
       this.writeBallFromSnap(index, snap);
@@ -327,7 +447,7 @@ export class VersusGame {
     }
 
     if (err > BLEND_ERR) {
-      const t = 0.35;
+      const t = Math.min(0.28, 0.12 + err / 1_000);
       ball.x += (snap.x - ball.x) * t;
       ball.y += (snap.y - ball.y) * t;
       ball.vx += (snap.vx - ball.vx) * t;
@@ -434,14 +554,16 @@ export class VersusGame {
     if (player === 0) this.scoreP1 += 1;
     else this.scoreP2 += 1;
 
-    this.floatingTexts.push({
-      x: ball.x,
-      y: ball.y - 40,
-      text: '+1',
-      life: 1.2,
-      vy: -80,
-      color: isSwish ? '#4ade80' : '#fbbf24',
-    });
+    if (this.effectsEnabled) {
+      this.floatingTexts.push({
+        x: ball.x,
+        y: ball.y - 40,
+        text: '+1',
+        life: 1.2,
+        vy: -80,
+        color: isSwish ? '#4ade80' : '#fbbf24',
+      });
+    }
 
     this.callbacks.onScore(player, this.scoreP1, this.scoreP2);
     if (isSwish) this.callbacks.onSwoosh();
@@ -453,12 +575,14 @@ export class VersusGame {
     onBasket(this.hoop, this.targetClimbOffset);
     resetHoopNet(this.hoop);
 
-    const q = getRenderQuality();
-    const burstCount = q === 'low' ? (isSwish ? 8 : 5) : isSwish ? 28 : 16;
-    spawnBurst(celebrateBall.x, celebrateBall.y, isSwish ? '#ffffff' : '#f3c14d', burstCount);
-    if (isSwish && q !== 'low') spawnSwishFlash(celebrateBall.x, celebrateBall.y);
-    this.shake = isSwish ? 16 : 9;
-    this.shakeTimer = isSwish ? 0.32 : 0.18;
+    if (this.effectsEnabled) {
+      const q = getRenderQuality();
+      const burstCount = q === 'low' ? (isSwish ? 8 : 5) : isSwish ? 28 : 16;
+      spawnBurst(celebrateBall.x, celebrateBall.y, isSwish ? '#ffffff' : '#f3c14d', burstCount);
+      if (isSwish && q !== 'low') spawnSwishFlash(celebrateBall.x, celebrateBall.y);
+      this.shake = isSwish ? 16 : 9;
+      this.shakeTimer = isSwish ? 0.32 : 0.18;
+    }
   }
 
   update(rawDt: number): void {
@@ -512,7 +636,7 @@ export class VersusGame {
           ? this.balls[0]
           : this.balls[1];
       updateHoopNet(this.hoop, netBall, dt);
-      updateParticles(dt);
+      if (this.effectsEnabled) updateParticles(dt);
 
       if (!this.hoop.animating && !this.climbAnimating) {
         syncHoopToCamera(this.hoop, this.climbOffset);
@@ -574,10 +698,11 @@ export class VersusGame {
       !ball.hasLaunched,
     );
     this.tryClearFallThrough(own);
+    resolveBallBallCollision(this.balls[0], this.balls[1]);
 
     updateHoop(this.hoop, dt);
     updateHoopNet(this.hoop, ball, dt);
-    updateParticles(dt);
+    if (this.effectsEnabled) updateParticles(dt);
 
     if (bounced && this.bounceCooldown <= 0) {
       this.callbacks.onBounce();

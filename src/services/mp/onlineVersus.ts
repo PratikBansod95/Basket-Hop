@@ -6,10 +6,7 @@ import type {
   MpServerMessage,
 } from '../../../shared/contracts/mp';
 import { VersusGame, type VersusPlayerId, type VersusResult } from '../../game/VersusGame';
-import { SnapshotBuffer, interpDelayMs } from './snapshotBuffer';
-
-const SNAPSHOT_HZ = 20;
-const SNAPSHOT_INTERVAL_MS = 1000 / SNAPSHOT_HZ;
+import { SnapshotBuffer } from './snapshotBuffer';
 
 export type OnlineVersusHandlers = {
   onCountdown: (seconds: number, players: MpPlayerInfo[]) => void;
@@ -23,8 +20,8 @@ export type OnlineVersusHandlers = {
 };
 
 /**
- * Host-authoritative session with sequenced inputs, event + tick snaps,
- * RTT-based interpolation, and guest own-ball prediction.
+ * Server-authoritative session with sequenced inputs, local prediction,
+ * pending-input replay, adaptive interpolation, and bounded reconciliation.
  */
 export class OnlineVersusSession {
   yourSlot: VersusPlayerId = 0;
@@ -32,14 +29,11 @@ export class OnlineVersusSession {
   players: MpPlayerInfo[] = [];
   active = false;
 
-  private snapSeq = 0;
-  private lastPublishAt = 0;
   private localTapSeq = 0;
-  private lastRemoteTapSeq = 0;
   private buffer = new SnapshotBuffer();
-  /** Offset: hostServerTime ≈ localNow + hostClockOffset */
-  private hostClockOffset = 0;
-  private hostClockSamples = 0;
+  private pendingTaps: Array<{ seq: number; serverTime: number }> = [];
+  private presentation: MpMatchSnapshot | null = null;
+  private lastCorrectionPx = 0;
 
   constructor(
     private mp: MpClient,
@@ -53,17 +47,13 @@ export class OnlineVersusSession {
         this.handlers.onCountdown(message.seconds, message.players);
         return true;
       case 'match_start':
-        this.begin(message.yourSlot, message.youAreHost, message.players);
+        this.begin(message.yourSlot, message.youAreHost, message.players, message.startAt);
         return true;
       case 'tap':
-        if (this.youAreHost && this.active) {
-          this.applyRemoteTap(message.slot, message.seq);
-        }
+        // Protocol-v3 compatibility only; the server now owns simulation.
         return true;
       case 'snapshot':
-        if (!this.youAreHost && this.active) {
-          this.onRemoteSnapshot(message.state);
-        }
+        if (this.active) this.onRemoteSnapshot(message.state);
         return true;
       case 'match_end':
         this.endFromNetwork(message.result);
@@ -75,100 +65,69 @@ export class OnlineVersusSession {
     }
   }
 
-  private begin(yourSlot: VersusPlayerId, youAreHost: boolean, players: MpPlayerInfo[]): void {
+  private begin(
+    yourSlot: VersusPlayerId,
+    youAreHost: boolean,
+    players: MpPlayerInfo[],
+    _startAt: number,
+  ): void {
     this.yourSlot = yourSlot;
     this.youAreHost = youAreHost;
     this.players = players;
     this.active = true;
-    this.snapSeq = 0;
-    this.lastPublishAt = 0;
     this.localTapSeq = 0;
-    this.lastRemoteTapSeq = 0;
+    this.pendingTaps = [];
     this.buffer.clear();
-    this.hostClockOffset = 0;
-    this.hostClockSamples = 0;
+    this.presentation = null;
+    this.lastCorrectionPx = 0;
     this.game.reset();
-    this.game.networkMode = youAreHost ? 'authority' : 'puppet';
+    this.game.startPlaying();
+    this.game.networkMode = 'puppet';
     this.game.puppetOwnSlot = yourSlot;
     this.handlers.onMatchStart({ yourSlot, youAreHost, players });
   }
 
-  private applyRemoteTap(slot: VersusPlayerId, seq: number): void {
-    if (seq > 0 && seq <= this.lastRemoteTapSeq) return;
-    if (seq > 0) this.lastRemoteTapSeq = seq;
-    this.game.handleTap(slot);
-    this.publishSnapshot(true);
-  }
-
   private onRemoteSnapshot(state: MpMatchSnapshot): void {
-    this.buffer.push(state);
-    const sampleOffset = state.serverTime - performance.now();
-    this.hostClockSamples += 1;
-    if (this.hostClockSamples === 1) {
-      this.hostClockOffset = sampleOffset;
-    } else {
-      this.hostClockOffset = this.hostClockOffset * 0.85 + sampleOffset * 0.15;
+    this.buffer.push(state, Date.now());
+    const acknowledged = state.ackTapSeq[this.yourSlot] ?? 0;
+    if (this.pendingTaps.length === 0 && this.localTapSeq < acknowledged) {
+      this.localTapSeq = acknowledged;
     }
-    // Reconcile predicted own ball against latest authoritative snap (not interpolated).
-    this.game.applySnapshotVisual(state, {
-      ownSlot: this.yourSlot,
-      mode: 'reconcile',
-    });
+    this.pendingTaps = this.pendingTaps.filter((tap) => tap.seq > acknowledged);
+    // Preserve prediction while an input is in flight. Once acknowledged, the
+    // authoritative snapshot contains that input and bounded reconciliation is safe.
+    this.game.applyAuthoritativeRemote(state, this.yourSlot, false);
+    this.lastCorrectionPx = this.game.reconcileOwnWithPending(
+      state,
+      this.yourSlot,
+      this.pendingTaps,
+      this.mp.serverNow(),
+    );
   }
 
-  /** Host: call after physics each frame (and after taps). */
-  publishSnapshotIfDue(nowMs: number): void {
-    if (!this.active || !this.youAreHost) return;
-    if (nowMs - this.lastPublishAt < SNAPSHOT_INTERVAL_MS) return;
-    this.publishSnapshot(false);
-  }
-
-  private publishSnapshot(force: boolean): void {
-    if (!this.active || !this.youAreHost) return;
-    const now = performance.now();
-    if (!force && now - this.lastPublishAt < SNAPSHOT_INTERVAL_MS * 0.5) return;
-    this.lastPublishAt = now;
-    this.snapSeq += 1;
-    this.mp.send({
-      type: 'snapshot',
-      state: this.game.exportSnapshot(this.snapSeq, now),
-    });
-  }
-
-  /**
-   * Guest: interpolate remote world into the game (opponent / hoop / scores).
-   * Own ball is left for local prediction; reconciled on new snaps only.
-   */
+  /** Interpolate remote/shared presentation state; keep the own ball predicted. */
   sampleRemoteState(nowMs: number): void {
-    if (!this.active || this.youAreHost) return;
+    void nowMs;
+    if (!this.active) return;
     const latest = this.buffer.latest;
     if (!latest) return;
 
-    const delay = interpDelayMs(this.mp.getRttMs());
-    const renderHostTime = nowMs + this.hostClockOffset - delay;
-    const sampled = this.buffer.sampleAt(renderHostTime) ?? latest;
-
-    this.game.applySnapshotVisual(sampled, {
-      ownSlot: this.yourSlot,
-      mode: 'world',
-    });
+    const delay = this.buffer.recommendedDelayMs(this.mp.getRttMs());
+    const renderServerTime = this.mp.serverNow() - delay;
+    this.presentation = this.buffer.sampleAt(renderServerTime) ?? latest;
   }
 
   handleLocalTap(): void {
     if (!this.active) return;
-    if (this.youAreHost) {
-      this.game.handleTap(this.yourSlot);
-      this.publishSnapshot(true);
-      return;
-    }
-
     this.localTapSeq += 1;
     this.game.handleTap(this.yourSlot);
+    const serverTime = this.mp.serverNow();
+    this.pendingTaps.push({ seq: this.localTapSeq, serverTime });
     this.mp.send({
       type: 'tap',
       slot: this.yourSlot,
       seq: this.localTapSeq,
-      clientTime: performance.now(),
+      clientTime: serverTime,
     });
   }
 
@@ -176,28 +135,35 @@ export class OnlineVersusSession {
     return this.mp.getRttMs();
   }
 
-  publishMatchEnd(result: VersusResult): void {
-    if (!this.youAreHost || !this.active) return;
-    const payload: MpMatchResult = {
-      scoreP1: result.scoreP1,
-      scoreP2: result.scoreP2,
-      winner: result.winner,
-      reason: 'timer',
+  getPresentationSnapshot(): MpMatchSnapshot | null {
+    return this.presentation ?? this.buffer.latest;
+  }
+
+  getDiagnostics(): {
+    rttMs: number;
+    jitterMs: number;
+    interpolationMs: number;
+    bufferedSnapshots: number;
+    correctionPx: number;
+    underrunRate: number;
+  } {
+    return {
+      rttMs: this.mp.getRttMs(),
+      jitterMs: Math.max(this.mp.getJitterMs(), this.buffer.jitterMs),
+      interpolationMs: this.buffer.recommendedDelayMs(this.mp.getRttMs()),
+      bufferedSnapshots: this.buffer.size,
+      correctionPx: this.lastCorrectionPx,
+      underrunRate: this.buffer.underrunRate,
     };
-    this.mp.send({ type: 'match_end', result: payload });
-    this.teardown();
-    this.handlers.onMatchEnd({ ...result, reason: 'timer' });
   }
 
   private endFromNetwork(result: MpMatchResult): void {
     if (!this.active) return;
-    const scoreP1 = result.reason === 'forfeit' ? this.game.scoreP1 : result.scoreP1;
-    const scoreP2 = result.reason === 'forfeit' ? this.game.scoreP2 : result.scoreP2;
     this.game.markMatchOver();
     this.teardown();
     this.handlers.onMatchEnd({
-      scoreP1,
-      scoreP2,
+      scoreP1: result.scoreP1,
+      scoreP2: result.scoreP2,
       winner: result.winner,
       durationSec: 120,
       reason: result.reason,
@@ -208,6 +174,8 @@ export class OnlineVersusSession {
     this.active = false;
     this.game.networkMode = 'authority';
     this.buffer.clear();
+    this.pendingTaps = [];
+    this.presentation = null;
   }
 
   dispose(): void {

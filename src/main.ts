@@ -246,14 +246,7 @@ async function main(): Promise<void> {
     onSwoosh: () => sfx.swoosh(),
     onScore: () => {},
     onMatchEnd: (result) => {
-      if (onlineSession?.active && onlineSession.youAreHost) {
-        onlineSession.publishMatchEnd(result);
-        return;
-      }
-      if (onlineSession?.active && !onlineSession.youAreHost) {
-        // Guest waits for authoritative match_end from the host.
-        return;
-      }
+      if (onlineSession?.active) return;
       sfx.gameOver();
       versusResultModal.show(result, onlineLabels);
     },
@@ -289,7 +282,7 @@ async function main(): Promise<void> {
     onlineMp = mp;
     onlineSession = new OnlineVersusSession(mp, versusGame, {
       onCountdown: () => {},
-      onMatchStart: ({ yourSlot, youAreHost, players }) => {
+      onMatchStart: ({ yourSlot, players }) => {
         const p1 = players.find((p) => p.slot === 0)?.nickname ?? 'P1';
         const p2 = players.find((p) => p.slot === 1)?.nickname ?? 'P2';
         onlineLabels = { p1, p2 };
@@ -297,9 +290,7 @@ async function main(): Promise<void> {
         versusHud.setLabels(
           p1,
           p2,
-          youAreHost
-            ? `Tap to shoot · You are ${you} (host)`
-            : `Tap to shoot · You are ${you}`,
+          `Tap to shoot · You are ${you}`,
         );
         activeMode = 'versus';
         skinsShop.hide();
@@ -333,6 +324,9 @@ async function main(): Promise<void> {
           durationSec: 120,
           reason: 'forfeit',
         });
+      },
+      onReconnecting: () => {
+        versusHud.setStatus('Reconnecting…');
       },
       onError: () => {},
     });
@@ -504,14 +498,22 @@ async function main(): Promise<void> {
         (fixedDt) => versusGame.update(fixedDt),
         maxPhysicsStepsForQuality(quality),
       );
-      onlineSession?.publishSnapshotIfDue(now);
       const alpha = Math.max(0, Math.min(1, physicsAcc / FIXED_DT));
-      const b0 = versusGame.getDisplayBall(0, alpha);
-      const b1 = versusGame.getDisplayBall(1, alpha);
-      const displayClimb = versusGame.getDisplayClimbOffset(alpha);
-      const displayHoop = versusGame.getDisplayHoop(alpha);
+      let b0 = versusGame.getDisplayBall(0, alpha);
+      let b1 = versusGame.getDisplayBall(1, alpha);
+      let displayClimb = versusGame.getDisplayClimbOffset(alpha);
+      let displayHoop = versusGame.getDisplayHoop(alpha);
+      const netSnapshot = onlineSession?.getPresentationSnapshot() ?? null;
+      if (netSnapshot && onlineSession) {
+        const remoteSlot: VersusPlayerId = onlineSession.yourSlot === 0 ? 1 : 0;
+        const remote = netSnapshot.balls[remoteSlot];
+        if (remoteSlot === 0) b0 = remote;
+        else b1 = remote;
+        displayClimb = netSnapshot.climbOffset;
+        displayHoop = { ...displayHoop, ...netSnapshot.hoop };
+      }
       const displayShake = versusGame.getDisplayShake() * shakeScaleForQuality(quality);
-      const climbLevel = altitudeTier(versusGame.climbOffset);
+      const climbLevel = altitudeTier(displayClimb);
 
       const inGame = versusGame.phase !== GamePhase.Menu;
       if (inGame !== inGameClass) {
@@ -522,14 +524,14 @@ async function main(): Promise<void> {
       // Hide solo HUD while versus is active.
       hud.update(game.stats, 'menu', false);
       versusHud.update(
-        versusGame.scoreP1,
-        versusGame.scoreP2,
-        versusGame.timeLeft,
+        netSnapshot?.scoreP1 ?? versusGame.scoreP1,
+        netSnapshot?.scoreP2 ?? versusGame.scoreP2,
+        netSnapshot?.timeLeft ?? versusGame.timeLeft,
         versusGame.phase,
         versusGame.balls[0].hasLaunched || versusGame.balls[1].hasLaunched,
       );
       if (onlineSession?.active) {
-        versusHud.setPing(onlineSession.getRttMs());
+        versusHud.setNetworkStats(onlineSession.getDiagnostics());
       } else {
         versusHud.setPing(null);
       }

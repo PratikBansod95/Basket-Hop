@@ -2,58 +2,71 @@ import http from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { lookupPlayer } from './db.js';
 import { MatchMaker } from './matchmaker.js';
-import {
-  MP_PROTOCOL_VERSION,
-  type MpClientMessage,
-} from './protocol.js';
+import { MP_PROTOCOL_VERSION } from './protocol.js';
+import { validateClientMessage } from './validation.js';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const HEARTBEAT_TIMEOUT_MS = Number(process.env.MP_HEARTBEAT_TIMEOUT_MS ?? 45_000);
+const MAX_PAYLOAD_BYTES = 16 * 1024;
+const allowedOrigins = new Set(
+  (process.env.MP_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
 
-const matchMaker = new MatchMaker();
-
-function parseMessage(raw: string): MpClientMessage | null {
-  try {
-    const data = JSON.parse(raw) as MpClientMessage;
-    if (!data || typeof data !== 'object' || typeof data.type !== 'string') return null;
-    return data;
-  } catch {
-    return null;
-  }
+function log(event: string, fields: Record<string, unknown> = {}): void {
+  console.log(JSON.stringify({ level: 'info', service: 'basket-hop-mp', event, ...fields }));
 }
 
+const matchMaker = new MatchMaker({ log });
+const helloSeen = new WeakSet<WebSocket>();
+const preAuthRates = new WeakMap<WebSocket, { startedAt: number; count: number }>();
+
 async function handleMessage(ws: WebSocket, raw: string): Promise<void> {
-  const message = parseMessage(raw);
-  if (!message) {
-    matchMaker.send(ws, { type: 'error', code: 'bad_message', message: 'Invalid message.' });
+  const existingSession = matchMaker.getSession(ws);
+  if (existingSession && !matchMaker.allowMessage(existingSession, false)) return;
+  const parsed = validateClientMessage(raw);
+  if (!parsed.ok) {
+    matchMaker.send(ws, { type: 'error', code: parsed.code, message: parsed.message });
     return;
   }
+  const message = parsed.message;
 
   if (message.type === 'hello') {
-    const protocol = Number(message.protocol);
-    if (!Number.isFinite(protocol) || protocol !== MP_PROTOCOL_VERSION) {
+    if (helloSeen.has(ws)) {
+      matchMaker.send(ws, {
+        type: 'error',
+        code: 'duplicate_hello',
+        message: 'hello may only be sent once per connection.',
+      });
+      log('auth_rejected', { reason: 'duplicate_hello' });
+      return;
+    }
+    helloSeen.add(ws);
+    if (message.protocol !== MP_PROTOCOL_VERSION) {
       matchMaker.send(ws, {
         type: 'error',
         code: 'protocol',
-        message: `App update required (got protocol ${String(message.protocol)}, need ${MP_PROTOCOL_VERSION}). Hard-refresh the page and try again.`,
+        message: `App update required (got protocol ${message.protocol}, need ${MP_PROTOCOL_VERSION}). Hard-refresh the page and try again.`,
       });
-      return;
-    }
-    const playerId = message.playerId?.trim();
-    if (!playerId) {
-      matchMaker.send(ws, {
-        type: 'error',
-        code: 'playerId',
-        message: 'playerId is required.',
-      });
+      log('auth_rejected', { playerId: message.playerId, reason: 'protocol' });
       return;
     }
 
     let player;
     try {
-      player = await lookupPlayer(playerId);
+      player = await lookupPlayer(message.playerId);
     } catch (error) {
-      console.error('[mp] player lookup failed', error);
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          service: 'basket-hop-mp',
+          event: 'player_lookup_failed',
+          playerId: message.playerId,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
       matchMaker.send(ws, {
         type: 'error',
         code: 'db',
@@ -68,15 +81,37 @@ async function handleMessage(ws: WebSocket, raw: string): Promise<void> {
         code: 'unregistered',
         message: 'Register a nickname in the game before online versus.',
       });
+      log('auth_rejected', { playerId: message.playerId, reason: 'unregistered' });
       return;
     }
 
-    const session = matchMaker.registerSession(ws, player.playerId, player.nickname);
+    const registration = matchMaker.registerSession(
+      ws,
+      player.playerId,
+      player.nickname,
+      message.resumeToken,
+    );
+    if (!registration.ok) {
+      matchMaker.send(ws, {
+        type: 'error',
+        code: registration.code,
+        message: registration.message,
+      });
+      try {
+        ws.close(4003, registration.code);
+      } catch {
+        // Socket may already be closing.
+      }
+      return;
+    }
+    const { session, resumed } = registration;
     matchMaker.send(ws, {
       type: 'welcome',
       playerId: session.playerId,
       nickname: session.nickname,
+      resumeToken: session.resumeToken,
     });
+    if (resumed) matchMaker.restoreSessionState(session);
     return;
   }
 
@@ -90,13 +125,15 @@ async function handleMessage(ws: WebSocket, raw: string): Promise<void> {
     return;
   }
 
+  if (message.type === 'tap' && !matchMaker.allowMessage(session, true, false)) return;
   matchMaker.touchHeartbeat(ws);
 
   switch (message.type) {
     case 'heartbeat':
       matchMaker.send(ws, {
         type: 'pong',
-        clientTime: Number(message.clientTime) || 0,
+        clientTime: message.clientTime,
+        serverTime: Date.now(),
       });
       break;
     case 'queue':
@@ -148,10 +185,47 @@ const server = http.createServer((req, res) => {
   res.end('Not found');
 });
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({
+  server,
+  maxPayload: MAX_PAYLOAD_BYTES,
+  verifyClient: (info, done) => {
+    if (allowedOrigins.size === 0 || (info.origin && allowedOrigins.has(info.origin))) {
+      done(true);
+      return;
+    }
+    log('origin_rejected', { origin: info.origin || null });
+    done(false, 403, 'Origin not allowed');
+  },
+});
 
 wss.on('connection', (ws) => {
-  ws.on('message', (data) => {
+  ws.on('message', (data, isBinary) => {
+    if (isBinary) {
+      matchMaker.send(ws, {
+        type: 'error',
+        code: 'bad_message',
+        message: 'Binary messages are not supported.',
+      });
+      return;
+    }
+    if (!matchMaker.getSession(ws)) {
+      const now = Date.now();
+      const rate = preAuthRates.get(ws) ?? { startedAt: now, count: 0 };
+      if (now - rate.startedAt >= 10_000) {
+        rate.startedAt = now;
+        rate.count = 0;
+      }
+      rate.count += 1;
+      preAuthRates.set(ws, rate);
+      if (rate.count > 30) {
+        try {
+          ws.close(4008, 'rate limit');
+        } catch {
+          // Socket may already be closing.
+        }
+        return;
+      }
+    }
     const raw = typeof data === 'string' ? data : data.toString('utf8');
     void handleMessage(ws, raw);
   });
@@ -168,5 +242,10 @@ setInterval(() => {
 }, 10_000).unref();
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[mp] listening on 0.0.0.0:${PORT}`);
+  log('server_listening', {
+    host: '0.0.0.0',
+    port: PORT,
+    allowedOrigins: allowedOrigins.size,
+    maxPayload: MAX_PAYLOAD_BYTES,
+  });
 });
