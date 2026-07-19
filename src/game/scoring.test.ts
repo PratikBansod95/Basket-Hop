@@ -62,4 +62,12 @@ describe('clean-shot scoring', () => {
 
     expect(checkScore(ball, hoop)?.scored).toBe(true);
   });
+
+  it('does not score when only a moving rim crosses a stationary ball', () => {
+    const hoop = createHoop('right', INITIAL_CLIMB_OFFSET);
+    const ball = createCrossingBall();
+    ball.frameStartY = ball.y;
+
+    expect(checkScore(ball, hoop, hoop.y + 4)).toBeNull();
+  });
 });

@@ -9,11 +9,12 @@ import {
   getZoneAtLevel,
   getZoneBlend,
   getZoneLabelOpacity,
+  getZoneProgress,
 } from './zones';
 
 describe('climb zones catalog', () => {
-  it('defines 12 zones with increasing start levels', () => {
-    expect(CLIMB_ZONES).toHaveLength(12);
+  it('defines 14 zones with increasing start levels', () => {
+    expect(CLIMB_ZONES).toHaveLength(14);
     for (let i = 1; i < CLIMB_ZONES.length; i += 1) {
       expect(CLIMB_ZONES[i].startLevel).toBeGreaterThan(CLIMB_ZONES[i - 1].startLevel);
     }
@@ -25,19 +26,19 @@ describe('climb zones catalog', () => {
 describe('getZoneAtLevel', () => {
   it('returns rooftop at level 0 and suburbs after its start', () => {
     expect(getZoneAtLevel(0).id).toBe('rooftop');
-    expect(getZoneAtLevel(7).id).toBe('rooftop');
-    expect(getZoneAtLevel(8).id).toBe('suburbs');
+    expect(getZoneAtLevel(4.9).id).toBe('rooftop');
+    expect(getZoneAtLevel(5).id).toBe('suburbs');
   });
 
   it('returns everest and space at their starts', () => {
-    expect(getZoneAtLevel(38).id).toBe('everest');
-    expect(getZoneAtLevel(88).id).toBe('space');
+    expect(getZoneAtLevel(27).id).toBe('everest');
+    expect(getZoneAtLevel(80).id).toBe('space');
   });
 });
 
 describe('getZoneBlend', () => {
   it('is fully in-zone before the blend window', () => {
-    const blend = getZoneBlend(4);
+    const blend = getZoneBlend(1);
     expect(blend.from.id).toBe('rooftop');
     expect(blend.to.id).toBe('rooftop');
     expect(blend.t).toBe(0);
@@ -55,6 +56,13 @@ describe('getZoneBlend', () => {
     const end = getZoneBlend(suburbs.startLevel);
     expect(end.from.id).toBe('suburbs');
     expect(end.t).toBe(0);
+  });
+
+  it('updates transitions continuously at fractional altitude levels', () => {
+    const suburbs = CLIMB_ZONES[1];
+    const start = suburbs.startLevel - ZONE_BLEND_BASKETS;
+    expect(getZoneBlend(start + 0.5).t).toBeCloseTo(1 / 6);
+    expect(getZoneBlend(start + 1.5).t).toBeCloseTo(0.5);
   });
 });
 
@@ -85,15 +93,22 @@ describe('endless remix', () => {
 describe('court fade and labels', () => {
   it('fades court world out leaving rooftop', () => {
     expect(getCourtWorldOpacity(0)).toBe(1);
-    expect(getCourtWorldOpacity(8)).toBe(0);
-    expect(getCourtWorldOpacity(6)).toBeGreaterThan(0);
-    expect(getCourtWorldOpacity(6)).toBeLessThan(1);
+    expect(getCourtWorldOpacity(5)).toBe(0);
+    expect(getCourtWorldOpacity(3)).toBeGreaterThan(0);
+    expect(getCourtWorldOpacity(3)).toBeLessThan(1);
   });
 
   it('exposes active titles during transitions', () => {
     expect(getActiveZoneTitle(0)).toBe('City Edge');
-    const mid = getZoneBlend(6);
-    expect(getActiveZoneTitle(6)).toBe(mid.t >= 0.45 ? mid.to.title : mid.from.title);
-    expect(getZoneLabelOpacity(6)).toBeGreaterThan(0);
+    const mid = getZoneBlend(3.5);
+    expect(getActiveZoneTitle(3.5)).toBe(mid.t >= 0.45 ? mid.to.title : mid.from.title);
+    expect(getZoneLabelOpacity(3.5)).toBeGreaterThan(0);
+  });
+
+  it('reports progress toward the next altitude environment', () => {
+    const progress = getZoneProgress(2.5);
+    expect(progress.current.id).toBe('rooftop');
+    expect(progress.next?.id).toBe('suburbs');
+    expect(progress.progress).toBeCloseTo(0.5);
   });
 });

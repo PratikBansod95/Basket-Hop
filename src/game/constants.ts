@@ -195,7 +195,13 @@ export function isBallOffBottom(worldY: number, radius: number, climbOffset: num
 
 export function altitudeTier(climbOffset: number): number {
 
-  return Math.floor(altitudeClimbed(climbOffset) / CLIMB_PER_BASKET);
+  return Math.floor(altitudeLevel(climbOffset));
+
+}
+
+export function altitudeLevel(climbOffset: number): number {
+
+  return altitudeClimbed(climbOffset) / CLIMB_PER_BASKET;
 
 }
 

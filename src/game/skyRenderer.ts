@@ -1,6 +1,6 @@
 import { CANVAS_HEIGHT, CANVAS_WIDTH, altitudeClimbed } from './constants';
 import { backgroundAssets } from './assetLoader';
-import { getZoneImage } from './zoneAssets';
+import { ensureZoneAssetsForLevel, getZoneImage } from './zoneAssets';
 import { getZoneAtLevel, getZoneBlend, type ClimbZone } from './zones';
 import { allowSkyAccents, allowSkyCrossfade, getRenderQuality } from './renderQuality';
 
@@ -36,6 +36,7 @@ export function drawSkyScreen(
   const climbed = altitudeClimbed(climbOffset);
   const blend = getZoneBlend(level);
   const quality = getRenderQuality();
+  ensureZoneAssetsForLevel(level);
 
   const fromImg = getZoneImage(blend.from.id);
   const toImg = getZoneImage(blend.to.id);
@@ -66,6 +67,16 @@ export function drawSkyScreen(
     }
 
     applyTint(ctx, blend.remixTint ?? activeZone.tint);
+    if (
+      !allowSkyCrossfade(quality) &&
+      blend.to.id !== blend.from.id &&
+      blend.t > 0 &&
+      blend.t < 1
+    ) {
+      const veil = 1 - Math.abs(blend.t - 0.5) * 2;
+      ctx.fillStyle = `rgba(225, 239, 255, ${Math.max(0, veil) * 0.13})`;
+      ctx.fillRect(0, 0, W, H);
+    }
     if (quality === 'high') drawVignette(ctx);
     if (allowSkyAccents(quality)) {
       drawZoneAccents(ctx, activeZone, time, climbed, 1);
@@ -117,7 +128,7 @@ function drawCoverImage(
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = quality === 'high' ? 'high' : 'low';
+  ctx.imageSmoothingQuality = quality === 'low' ? 'medium' : 'high';
   ctx.drawImage(img, 0, 0, iw, ih, x, y, drawW, drawH);
   ctx.restore();
 }
@@ -206,6 +217,36 @@ function drawZoneAccents(
       const y = ((i * 97 + drift * 0.5) % H + H) % H;
       ctx.fillStyle = `rgba(255,255,255,${twinkle * (zone.accent === 'nebula' ? 0.45 : 0.7)})`;
       ctx.fillRect(x, y, i % 5 === 0 ? 2 : 1, i % 5 === 0 ? 2 : 1);
+    }
+  }
+
+  if (zone.accent === 'rain') {
+    const count = getRenderQuality() === 'high' ? 24 : 8;
+    ctx.strokeStyle = 'rgba(205, 225, 255, 0.38)';
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < count; i += 1) {
+      const x = ((i * 113 + time * 95) % (W + 80)) - 40;
+      const y = ((i * 71 + time * 210 + drift) % (H + 60)) - 30;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - 10, y + 26);
+      ctx.stroke();
+    }
+  }
+
+  if (zone.accent === 'aurora') {
+    const ribbons = getRenderQuality() === 'high' ? 3 : 2;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < ribbons; i += 1) {
+      const wave = Math.sin(time * 0.45 + i * 1.7) * 24;
+      const y = H * (0.18 + i * 0.13) + wave;
+      ctx.strokeStyle =
+        i % 2 === 0 ? 'rgba(86, 255, 196, 0.2)' : 'rgba(125, 154, 255, 0.18)';
+      ctx.lineWidth = getRenderQuality() === 'high' ? 28 : 18;
+      ctx.beginPath();
+      ctx.moveTo(-40, y);
+      ctx.bezierCurveTo(W * 0.25, y - 70, W * 0.7, y + 80, W + 40, y - 20);
+      ctx.stroke();
     }
   }
 

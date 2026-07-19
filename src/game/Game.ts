@@ -18,7 +18,13 @@ import {
 import { generateCoinsForHoop } from './coins';
 import { createColliders } from './collision';
 import { debugLog } from './debug';
-import { createHoop, onBasket, syncHoopToCamera, updateHoop } from './hoop';
+import {
+  createHoop,
+  onBasket,
+  syncHoopToCamera,
+  updateHoop,
+  updateHoopPatrol,
+} from './hoop';
 import { resetHoopNet, updateHoopNet } from './netPhysics';
 import { getRenderQuality } from './renderQuality';
 import type { LaunchMechanic } from './mechanics/LaunchMechanic';
@@ -512,6 +518,13 @@ export class Game {
 
     if (this.phase === GamePhase.Playing) {
       const useFloor = !this.ball.hasLaunched;
+      const previousHoopY = this.hoop.y;
+      updateHoop(this.hoop, dt);
+      let hoopMotion = { deltaY: 0, velocityY: 0 };
+      if (!this.hoop.animating && !this.climbAnimating) {
+        syncHoopToCamera(this.hoop, this.climbOffset);
+        hoopMotion = updateHoopPatrol(this.hoop, dt, this.climbOffset, true);
+      }
 
       let bounced = false;
       integrateBall(
@@ -524,16 +537,13 @@ export class Game {
           bounced = true;
         },
         useFloor,
+        hoopMotion,
       );
-      updateHoop(this.hoop, dt);
       updateHoopNet(this.hoop, this.ball, dt);
       updateParticles(dt);
       this.tryClearFallThrough();
       this.collectCoins();
 
-      if (!this.hoop.animating && !this.climbAnimating) {
-        syncHoopToCamera(this.hoop, this.climbOffset);
-      }
       this.tryRespawnCoinsAfterTransition();
 
       if (bounced && this.bounceCooldown <= 0) {
@@ -542,7 +552,7 @@ export class Game {
       }
       this.bounceCooldown -= dt;
 
-      const scoreResult = checkScore(this.ball, this.hoop);
+      const scoreResult = checkScore(this.ball, this.hoop, previousHoopY);
       if (scoreResult) {
         if (this.tutorial.awaitingSuccess) {
           this.completeTutorialStep();

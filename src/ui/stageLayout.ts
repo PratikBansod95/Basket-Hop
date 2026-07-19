@@ -23,8 +23,8 @@ const DESIGN_WIDTH = CANVAS_WIDTH;
 const DESIGN_HEIGHT = CANVAS_HEIGHT;
 
 /** Cap DPR to keep fill-rate reasonable on high-density phones. */
-export function getDevicePixelRatio(): number {
-  return cappedDevicePixelRatio();
+export function getDevicePixelRatio(stageScale = 1): number {
+  return cappedDevicePixelRatio(stageScale);
 }
 
 export function readSafeInsets(): SafeInsets {
@@ -76,8 +76,8 @@ export function computeStageLayout(
   const padY = safe.top + safe.bottom;
   const availW = Math.max(1, viewWidth - padX);
   const availH = Math.max(1, viewHeight - padY);
-  const dpr = getDevicePixelRatio();
   const scale = Math.min(availW / DESIGN_WIDTH, availH / DESIGN_HEIGHT);
+  const dpr = getDevicePixelRatio(scale);
 
   return {
     scale,

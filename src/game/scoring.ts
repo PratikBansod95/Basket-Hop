@@ -9,20 +9,31 @@ export interface ScoreResult {
   displayText: string;
 }
 
-export function checkScore(ball: Ball, hoop: Hoop): ScoreResult | null {
+export function checkScore(
+  ball: Ball,
+  hoop: Hoop,
+  previousHoopY: number = hoop.y,
+): ScoreResult | null {
   if (ball.scoredThisShot || !ball.hasLaunched || ball.fallingThrough) return null;
 
   const rimLine = hoop.y + HOOP_GEOMETRY.rimLeft.offsetY + HOOP_GEOMETRY.rimLeft.thickness;
+  const previousRimLine =
+    previousHoopY + HOOP_GEOMETRY.rimLeft.offsetY + HOOP_GEOMETRY.rimLeft.thickness;
   const { left: rimLeft, right: rimRight } = getRimPoints(hoop.x, hoop.y, hoop.side);
 
   const prevTop = ball.frameStartY - ball.radius;
   const currTop = ball.y - ball.radius;
+  const previousRelativeTop = prevTop - previousRimLine;
+  const currentRelativeTop = currTop - rimLine;
 
   if (
-    prevTop < rimLine &&
-    currTop >= rimLine
+    currTop > prevTop &&
+    previousRelativeTop < 0 &&
+    currentRelativeTop >= 0
   ) {
-    const t = (rimLine - prevTop) / (currTop - prevTop);
+    const relativeTravel = currentRelativeTop - previousRelativeTop;
+    if (relativeTravel <= 0) return null;
+    const t = -previousRelativeTop / relativeTravel;
     const cx = ball.frameStartX + (ball.x - ball.frameStartX) * t;
     if (cx - ball.radius > rimLeft && cx + ball.radius < rimRight) {
       const isSwish = !ball.hitRimThisShot;

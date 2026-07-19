@@ -79,6 +79,8 @@ export function drawBall(
 
   if (img && img.complete && img.naturalWidth > 0) {
     const size = radius * 2.05;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, -size / 2, -size / 2, size, size);
   } else {
     drawFallbackBall(ctx, radius);

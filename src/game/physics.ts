@@ -58,6 +58,7 @@ export function integrateBall(
   onRimHit: () => void,
   onBounce: () => void,
   useFloor: boolean,
+  hoopMotion: { deltaY: number; velocityY: number } = { deltaY: 0, velocityY: 0 },
 ): void {
   ball.frameStartX = ball.x;
   ball.frameStartY = ball.y;
@@ -80,8 +81,6 @@ export function integrateBall(
     ball.rotation += (ball.vx / ball.radius) * dt;
   }
 
-  updateColliders(colliders, hoop.x, hoop.y, hoop.side);
-
   const speed = Math.hypot(ball.vx, ball.vy);
   const maxStep = ball.radius * 0.35;
   const steps = Math.max(1, Math.ceil((speed * dt) / maxStep));
@@ -92,8 +91,20 @@ export function integrateBall(
     const py = ball.y;
     ball.x += ball.vx * stepDt;
     ball.y += ball.vy * stepDt;
+    const hoopYAtStep =
+      hoop.y - hoopMotion.deltaY * (1 - (i + 1) / steps);
+    updateColliders(colliders, hoop.x, hoopYAtStep, hoop.side);
 
-    resolveHoopHits(ball, px, py, colliders, hoop, onRimHit, onBounce);
+    resolveHoopHits(
+      ball,
+      px,
+      py + hoopMotion.deltaY / steps,
+      colliders,
+      hoop,
+      onRimHit,
+      onBounce,
+      hoopMotion.velocityY,
+    );
 
     if (ball.x + ball.radius < 0) ball.x = CANVAS_WIDTH + ball.radius;
     if (ball.x - ball.radius > CANVAS_WIDTH) ball.x = -ball.radius;
@@ -116,6 +127,7 @@ export function integrateBall(
       }
     }
   }
+  updateColliders(colliders, hoop.x, hoop.y, hoop.side);
 
   hoop.tiltVel += -hoop.tilt * RIM_TILT_SPRING;
   hoop.tiltVel *= RIM_TILT_DAMPING;
@@ -135,6 +147,7 @@ function resolveHoopHits(
   hoop: Hoop,
   onRimHit: () => void,
   onBounce: () => void,
+  hoopVelocityY: number,
 ): void {
   // After a score the ball falls through the rim, but the backboard must still bounce bank shots.
   const keys: ColliderKey[] = ball.fallingThrough
@@ -155,14 +168,16 @@ function resolveHoopHits(
 
     if (key === 'rimLeft' || key === 'rimRight') {
       if (hit.face === 'top') {
-        ball.vy = -Math.abs(ball.vy) * BOUNCE_COEF;
+        const relativeVy = ball.vy - hoopVelocityY;
+        ball.vy = -Math.abs(relativeVy) * BOUNCE_COEF + hoopVelocityY;
         ball.vx *= 0.9;
         if (Math.abs(ball.vx) < 100) {
           ball.vx = colliders.hoopSide === 'right' ? -100 : 100;
         }
         hoop.tiltVel += 0.05;
       } else if (hit.face === 'bottom') {
-        ball.vy = Math.abs(ball.vy) * BOUNCE_COEF;
+        const relativeVy = ball.vy - hoopVelocityY;
+        ball.vy = Math.abs(relativeVy) * BOUNCE_COEF + hoopVelocityY;
         hoop.tiltVel -= 0.03;
       } else {
         ball.vx = -ball.vx * BOUNCE_COEF;
@@ -173,12 +188,16 @@ function resolveHoopHits(
       onRimHit();
     } else if (key === 'backboard') {
       if (hit.normalX !== 0) ball.vx = -ball.vx * BOUNCE_COEF;
-      if (hit.normalY !== 0) ball.vy = -ball.vy * BOUNCE_COEF;
+      if (hit.normalY !== 0) {
+        ball.vy = -(ball.vy - hoopVelocityY) * BOUNCE_COEF + hoopVelocityY;
+      }
       // A bank shot can score, but it is not a clean swish.
       ball.hitRimThisShot = true;
     } else {
       if (hit.normalX !== 0) ball.vx = -ball.vx * BOUNCE_COEF;
-      if (hit.normalY !== 0) ball.vy = -ball.vy * BOUNCE_COEF;
+      if (hit.normalY !== 0) {
+        ball.vy = -(ball.vy - hoopVelocityY) * BOUNCE_COEF + hoopVelocityY;
+      }
       ball.hitRimThisShot = true;
     }
     onBounce();

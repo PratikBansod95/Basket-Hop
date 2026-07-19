@@ -6,7 +6,7 @@ export interface ClimbZone {
   asset: string;
   /** Optional canvas multiply tint (rgba string). */
   tint?: string;
-  accent: 'none' | 'snow' | 'stars' | 'nebula';
+  accent: 'none' | 'snow' | 'stars' | 'nebula' | 'rain' | 'aurora';
 }
 
 export const ZONE_BLEND_BASKETS = 3;
@@ -24,77 +24,93 @@ export const CLIMB_ZONES: readonly ClimbZone[] = [
   {
     id: 'suburbs',
     title: 'Rooftop NYC',
-    startLevel: 8,
+    startLevel: 5,
     asset: '/assets/zones/suburbs.webp',
     accent: 'none',
   },
   {
     id: 'hills',
     title: 'Green Hills',
-    startLevel: 16,
+    startLevel: 11,
     asset: '/assets/zones/hills.webp',
     accent: 'none',
   },
   {
     id: 'mountains',
     title: 'High Peaks',
-    startLevel: 26,
+    startLevel: 18,
     asset: '/assets/zones/mountains.webp',
     accent: 'none',
   },
   {
     id: 'everest',
     title: 'Everest',
-    startLevel: 38,
+    startLevel: 27,
     asset: '/assets/zones/everest.webp',
     accent: 'snow',
   },
   {
     id: 'troposphere',
     title: 'Above the Clouds',
-    startLevel: 50,
+    startLevel: 36,
     asset: '/assets/zones/troposphere.webp',
     accent: 'none',
   },
   {
+    id: 'storm',
+    title: 'Storm Front',
+    startLevel: 44,
+    asset: '/assets/zones/troposphere.webp',
+    tint: 'rgba(17, 28, 58, 0.22)',
+    accent: 'rain',
+  },
+  {
     id: 'stratosphere',
     title: 'Stratosphere',
-    startLevel: 62,
+    startLevel: 52,
     asset: '/assets/zones/stratosphere.webp',
     accent: 'none',
   },
   {
+    id: 'aurora',
+    title: 'Aurora Layer',
+    startLevel: 60,
+    asset: '/assets/zones/stratosphere.webp',
+    tint: 'rgba(78, 255, 202, 0.08)',
+    accent: 'aurora',
+  },
+  {
     id: 'heaven',
     title: 'Heaven',
-    startLevel: 74,
+    startLevel: 69,
     asset: '/assets/zones/heaven.webp',
     accent: 'none',
   },
   {
     id: 'space',
     title: 'Near Space',
-    startLevel: 88,
+    startLevel: 80,
     asset: '/assets/zones/space.webp',
     accent: 'stars',
   },
   {
     id: 'deepspace',
     title: 'Deep Space',
-    startLevel: 102,
+    startLevel: 93,
     asset: '/assets/zones/deepspace.webp',
     accent: 'stars',
   },
   {
     id: 'nebula',
     title: 'Nebula Drift',
-    startLevel: 118,
+    startLevel: 108,
     asset: '/assets/zones/nebula.webp',
     accent: 'nebula',
   },
   {
     id: 'void',
     title: 'The Void',
-    startLevel: 136,
+    startLevel: 124,
     asset: '/assets/zones/void.webp',
     accent: 'stars',
   },
@@ -126,7 +142,7 @@ function zoneById(id: string): ClimbZone {
 
 /** Primary zone for a basket level (before blend math). */
 export function getZoneAtLevel(level: number): ClimbZone {
-  const safe = Math.max(0, Math.floor(level));
+  const safe = Math.max(0, level);
   const voidStart = CLIMB_ZONES[CLIMB_ZONES.length - 1].startLevel;
   const endlessStart = voidStart + ENDLESS_CYCLE_LENGTH;
 
@@ -161,7 +177,7 @@ export function getEndlessRemix(level: number): { zone: ClimbZone; tint: string 
  * After a full Void dwell, crossfades through endless remix slots.
  */
 export function getZoneBlend(level: number): ZoneBlend {
-  const safe = Math.max(0, Math.floor(level));
+  const safe = Math.max(0, level);
   const voidZone = CLIMB_ZONES[CLIMB_ZONES.length - 1];
   const voidStart = voidZone.startLevel;
   const endlessStart = voidStart + ENDLESS_CYCLE_LENGTH;
@@ -260,4 +276,30 @@ export function getZoneLabelOpacity(level: number): number {
 export function getActiveZoneTitle(level: number): string {
   const blend = getZoneBlend(level);
   return blend.t >= 0.45 ? blend.to.title : blend.from.title;
+}
+
+export interface ZoneProgress {
+  current: ClimbZone;
+  next: ClimbZone | null;
+  progress: number;
+}
+
+export function getZoneProgress(level: number): ZoneProgress {
+  const safe = Math.max(0, level);
+  let currentIndex = 0;
+  for (let i = 1; i < CLIMB_ZONES.length; i += 1) {
+    if (safe >= CLIMB_ZONES[i].startLevel) currentIndex = i;
+    else break;
+  }
+
+  const current = CLIMB_ZONES[currentIndex];
+  const next = CLIMB_ZONES[currentIndex + 1] ?? null;
+  if (!next) return { current, next: null, progress: 1 };
+
+  const span = Math.max(1, next.startLevel - current.startLevel);
+  return {
+    current,
+    next,
+    progress: Math.min(1, Math.max(0, (safe - current.startLevel) / span)),
+  };
 }

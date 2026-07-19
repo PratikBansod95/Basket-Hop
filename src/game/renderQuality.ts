@@ -9,10 +9,107 @@
 export type RenderQuality = 'high' | 'medium' | 'low';
 
 let cached: RenderQuality | null = null;
-let frameEmaMs = 16.7;
-let healthyFrames = 0;
-let stressedFrames = 0;
+let controller: AdaptiveQualityController | null = null;
 const qualityListeners = new Set<(q: RenderQuality) => void>();
+
+export interface RenderDiagnostics {
+  quality: RenderQuality;
+  frameEmaMs: number;
+  p95FrameMs: number;
+  refreshIntervalMs: number;
+  droppedFrameRatio: number;
+  transitions: number;
+}
+
+export class AdaptiveQualityController {
+  quality: RenderQuality;
+  frameEmaMs = 16.7;
+  refreshIntervalMs = 16.7;
+  droppedFrameRatio = 0;
+  transitions = 0;
+  private frameSamples: number[] = [];
+  private healthyMs = 0;
+  private stressedMs = 0;
+  private cooldownMs = 0;
+  private fasterRefreshMs = 0;
+
+  constructor(initial: RenderQuality) {
+    this.quality = initial;
+  }
+
+  noteFrame(dtMs: number): RenderQuality {
+    if (!Number.isFinite(dtMs) || dtMs <= 0) return this.quality;
+    const sample = Math.min(dtMs, 50);
+    this.frameSamples.push(sample);
+    if (this.frameSamples.length > 180) this.frameSamples.shift();
+    this.frameEmaMs = this.frameEmaMs * 0.9 + sample * 0.1;
+
+    if (sample >= 4 && sample < this.refreshIntervalMs * 0.8) {
+      this.fasterRefreshMs += sample;
+      if (this.fasterRefreshMs >= 500) {
+        this.refreshIntervalMs =
+          this.refreshIntervalMs * 0.88 + sample * 0.12;
+      }
+    } else {
+      this.fasterRefreshMs = 0;
+      if (
+        sample >= this.refreshIntervalMs * 0.8 &&
+        sample <= this.refreshIntervalMs * 1.2
+      ) {
+        this.refreshIntervalMs =
+          this.refreshIntervalMs * 0.98 + sample * 0.02;
+      }
+    }
+    const dropped = sample > this.refreshIntervalMs * 1.5 ? 1 : 0;
+    this.droppedFrameRatio = this.droppedFrameRatio * 0.96 + dropped * 0.04;
+    this.cooldownMs = Math.max(0, this.cooldownMs - sample);
+
+    const healthyLimit = this.refreshIntervalMs * 1.14;
+    const stressedLimit = this.refreshIntervalMs * 1.3;
+    if (this.frameEmaMs > stressedLimit) {
+      this.stressedMs += sample;
+      this.healthyMs = 0;
+      const severe =
+        this.frameEmaMs > this.refreshIntervalMs * 1.7 &&
+        this.droppedFrameRatio > 0.35;
+      if (
+        this.stressedMs >= (severe ? 500 : 1200) &&
+        this.quality !== 'low' &&
+        (this.cooldownMs === 0 || severe)
+      ) {
+        this.changeQuality('low', 5000);
+      }
+    } else if (this.frameEmaMs <= healthyLimit && this.droppedFrameRatio < 0.08) {
+      this.healthyMs += sample;
+      this.stressedMs = 0;
+      if (
+        this.healthyMs >= 4000 &&
+        this.quality === 'low' &&
+        this.cooldownMs === 0
+      ) {
+        this.changeQuality('medium', 3000);
+      }
+    } else {
+      this.healthyMs = 0;
+      this.stressedMs = 0;
+    }
+    return this.quality;
+  }
+
+  get p95FrameMs(): number {
+    if (this.frameSamples.length === 0) return this.frameEmaMs;
+    const sorted = [...this.frameSamples].sort((a, b) => a - b);
+    return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
+  }
+
+  private changeQuality(next: RenderQuality, cooldownMs: number): void {
+    this.quality = next;
+    this.transitions += 1;
+    this.healthyMs = 0;
+    this.stressedMs = 0;
+    this.cooldownMs = cooldownMs;
+  }
+}
 
 function detectBaseQuality(): RenderQuality {
   if (typeof window === 'undefined') return 'high';
@@ -36,11 +133,15 @@ function detectBaseQuality(): RenderQuality {
 function setQuality(next: RenderQuality): void {
   if (cached === next) return;
   cached = next;
+  if (controller) controller.quality = next;
   for (const listener of qualityListeners) listener(next);
 }
 
 export function getRenderQuality(): RenderQuality {
-  if (!cached) cached = detectBaseQuality();
+  if (!cached) {
+    cached = detectBaseQuality();
+    controller = new AdaptiveQualityController(cached);
+  }
   return cached;
 }
 
@@ -52,30 +153,21 @@ export function onRenderQualityChange(listener: (q: RenderQuality) => void): () 
 
 /** Feed display-frame duration so quality can adapt at runtime. */
 export function noteFrameTime(dtMs: number): void {
-  if (!Number.isFinite(dtMs) || dtMs <= 0) return;
-  const sample = Math.min(dtMs, 50);
-  frameEmaMs = frameEmaMs * 0.9 + sample * 0.1;
+  getRenderQuality();
+  const next = controller!.noteFrame(dtMs);
+  setQuality(next);
+}
 
-  const q = getRenderQuality();
-  if (frameEmaMs > 20) {
-    stressedFrames += 1;
-    healthyFrames = 0;
-    if (stressedFrames > 12 && q !== 'low') {
-      setQuality('low');
-      stressedFrames = 0;
-    }
-  } else if (frameEmaMs < 14.5) {
-    healthyFrames += 1;
-    stressedFrames = 0;
-    // Promote low → medium on sustained good frames (never auto-jump to high on phones).
-    if (healthyFrames > 120 && q === 'low') {
-      setQuality('medium');
-      healthyFrames = 0;
-    }
-  } else {
-    healthyFrames = 0;
-    stressedFrames = 0;
-  }
+export function getRenderDiagnostics(): RenderDiagnostics {
+  const quality = getRenderQuality();
+  return {
+    quality,
+    frameEmaMs: controller?.frameEmaMs ?? 16.7,
+    p95FrameMs: controller?.p95FrameMs ?? 16.7,
+    refreshIntervalMs: controller?.refreshIntervalMs ?? 16.7,
+    droppedFrameRatio: controller?.droppedFrameRatio ?? 0,
+    transitions: controller?.transitions ?? 0,
+  };
 }
 
 export function fxStrengthForQuality(q: RenderQuality = getRenderQuality()): number {
@@ -98,7 +190,7 @@ export function allowOrbitFx(q: RenderQuality = getRenderQuality()): boolean {
 }
 
 export function allowSkyAccents(q: RenderQuality = getRenderQuality()): boolean {
-  return q === 'high';
+  return q !== 'low';
 }
 
 export function allowSkyCrossfade(q: RenderQuality = getRenderQuality()): boolean {
@@ -106,7 +198,7 @@ export function allowSkyCrossfade(q: RenderQuality = getRenderQuality()): boolea
 }
 
 export function allowDangerZoneExtras(q: RenderQuality = getRenderQuality()): boolean {
-  return q === 'high';
+  return q !== 'low';
 }
 
 export function shakeScaleForQuality(q: RenderQuality = getRenderQuality()): number {
@@ -122,11 +214,22 @@ export function maxPhysicsStepsForQuality(q: RenderQuality = getRenderQuality())
 }
 
 /** Cap DPR to protect fill-rate on high-density phones. */
-export function cappedDevicePixelRatio(): number {
+export function targetCanvasScale(
+  stageScale: number,
+  rawDpr: number,
+  quality: RenderQuality,
+): number {
+  const nativeScale = Math.max(1, stageScale * Math.max(1, rawDpr));
+  if (quality === 'low') return Math.min(nativeScale, 1.35);
+  if (quality === 'medium') return Math.min(nativeScale, 1.85);
+  return Math.min(nativeScale, 2.25);
+}
+
+export function cappedDevicePixelRatio(stageScale = 1): number {
   if (typeof window === 'undefined') return 1;
-  const q = getRenderQuality();
-  const raw = window.devicePixelRatio || 1;
-  if (q === 'low') return Math.min(raw, 1.35);
-  if (q === 'medium') return Math.min(raw, 1.75);
-  return Math.min(raw, 2.25);
+  return targetCanvasScale(
+    stageScale,
+    window.devicePixelRatio || 1,
+    getRenderQuality(),
+  );
 }

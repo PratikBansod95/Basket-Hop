@@ -1,5 +1,5 @@
 import { SfxEngine } from './audio/sfx';
-import { CANVAS_HEIGHT, CANVAS_WIDTH, altitudeTier } from './game/constants';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, altitudeLevel } from './game/constants';
 import { DEBUG } from './game/debug';
 import { Game } from './game/Game';
 import { VersusGame, type VersusPlayerId } from './game/VersusGame';
@@ -9,7 +9,7 @@ import { DefaultTapLaunch } from './game/mechanics/defaultTapLaunch';
 import { render, renderLoading, renderVersus } from './game/renderer';
 import { preloadBackgroundAssets } from './game/assetLoader';
 import { preloadCoinAsset } from './game/coinRenderer';
-import { preloadZoneAssets } from './game/zoneAssets';
+import { getDecodedZoneAssetCount, preloadZoneAssets } from './game/zoneAssets';
 import { createPlatform } from './platform/youtube';
 import { mergeRunIntoSave, type SaveData } from './platform/types';
 import { normalizeSkinSave } from './shop/skinEconomy';
@@ -20,6 +20,7 @@ import { Hud } from './ui/hud';
 import { VersusLobby } from './ui/versusLobby';
 import { VersusHud } from './ui/versusHud';
 import { VersusResultModal } from './ui/versusResult';
+import { PerfDiagnostics } from './ui/perfDiagnostics';
 import { renderMenuHomeFx } from './ui/menuHome3d';
 import { SkinsShop } from './ui/skinsShop';
 import { NicknameGate } from './ui/nicknameGate';
@@ -28,6 +29,7 @@ import { bindStageResize, computeStageLayout, layoutsEqual, applyResponsiveCssVa
 import { FIXED_DT, stepFixed } from './game/physics';
 import {
   getRenderQuality,
+  getRenderDiagnostics,
   maxPhysicsStepsForQuality,
   noteFrameTime,
   onRenderQualityChange,
@@ -53,6 +55,7 @@ async function main(): Promise<void> {
   const menuFxCtx = menuFxCanvas.getContext('2d')!;
   const canvasStage = document.querySelector('.canvas-stage') as HTMLElement;
   const appRoot = document.getElementById('app')!;
+  const perfDiagnostics = new PerfDiagnostics(canvasStage);
   let lastLayout: StageLayout | null = null;
   let physicsAcc = 0;
   let currentRunId = newClientRunId();
@@ -492,6 +495,12 @@ async function main(): Promise<void> {
     const dt = dtMs / 1000;
     lastTime = now;
     noteFrameTime(dtMs);
+    perfDiagnostics.update(
+      now,
+      lastLayout,
+      getRenderDiagnostics(),
+      getDecodedZoneAssetCount(),
+    );
 
     const quality = getRenderQuality();
 
@@ -511,7 +520,7 @@ async function main(): Promise<void> {
       const displayClimb = versusGame.getDisplayClimbOffset(alpha);
       const displayHoop = versusGame.getDisplayHoop(alpha);
       const displayShake = versusGame.getDisplayShake() * shakeScaleForQuality(quality);
-      const climbLevel = altitudeTier(versusGame.climbOffset);
+      const climbLevel = altitudeLevel(displayClimb);
 
       const inGame = versusGame.phase !== GamePhase.Menu;
       if (inGame !== inGameClass) {
@@ -630,7 +639,7 @@ async function main(): Promise<void> {
           shake: displayShake,
           climbOffset: displayClimb,
           time: displayTime,
-          level: game.stats.level,
+          level: altitudeLevel(displayClimb),
         },
         DEBUG ? game.colliders : undefined,
         saveData.equippedSkin,
