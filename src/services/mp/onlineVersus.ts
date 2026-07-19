@@ -37,6 +37,7 @@ export class OnlineVersusSession {
   private interpolationDelayMs = 100;
   private renderServerTime = 0;
   private lastSampleAt = 0;
+  private startAt = 0;
 
   constructor(
     private mp: MpClient,
@@ -72,12 +73,13 @@ export class OnlineVersusSession {
     yourSlot: VersusPlayerId,
     youAreHost: boolean,
     players: MpPlayerInfo[],
-    _startAt: number,
+    startAt: number,
   ): void {
     const resuming = this.active && this.yourSlot === yourSlot;
     this.yourSlot = yourSlot;
     this.youAreHost = youAreHost;
     this.players = players;
+    this.startAt = startAt;
     if (resuming) {
       this.game.networkMode = 'puppet';
       this.game.puppetOwnSlot = yourSlot;
@@ -156,6 +158,7 @@ export class OnlineVersusSession {
 
   handleLocalTap(): void {
     if (!this.active) return;
+    if (this.mp.serverNow() < this.startAt) return;
     this.localTapSeq += 1;
     this.game.handleTap(this.yourSlot);
     const serverTime = this.mp.serverNow();
@@ -218,6 +221,7 @@ export class OnlineVersusSession {
     this.buffer.clear();
     this.pendingTaps = [];
     this.presentation = null;
+    this.startAt = 0;
   }
 
   dispose(): void {

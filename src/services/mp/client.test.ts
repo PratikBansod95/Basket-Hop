@@ -82,6 +82,7 @@ describe('MpClient socket generations', () => {
         playerId: '123e4567-e89b-42d3-a456-426614174000',
         nickname: 'Player',
         resumeToken: 'resume-token-value-1234567890',
+        serverTime: Date.now(),
       }),
     });
     first.emit('close');

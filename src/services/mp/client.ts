@@ -126,6 +126,7 @@ export class MpClient {
           this.resumeToken = message.resumeToken;
           this.reconnectAttempt = 0;
           this.reconnectStartedAt = 0;
+          this.noteServerClock(message.serverTime);
           this.startHeartbeat();
         }
         this.handlers.onMessage(message);
@@ -207,6 +208,15 @@ export class MpClient {
           ? offsetSample
           : this.serverClockOffsetMs * 0.85 + offsetSample * 0.15;
     }
+  }
+
+  private noteServerClock(serverTime: number): void {
+    if (!Number.isFinite(serverTime) || serverTime <= 0) return;
+    const offsetSample = serverTime + this.rttMs * 0.5 - Date.now();
+    this.serverClockOffsetMs =
+      this.rttSamples === 0
+        ? offsetSample
+        : this.serverClockOffsetMs * 0.7 + offsetSample * 0.3;
   }
 
   private startHeartbeat(): void {

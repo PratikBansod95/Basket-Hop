@@ -67,6 +67,7 @@ describe('MatchMaker', () => {
     expect(two.fake.sent.some((message) => message.type === 'match_start')).toBe(true);
     const initial = one.fake.sent.find((message) => message.type === 'snapshot');
     expect(initial?.type === 'snapshot' && initial.state.tick).toBe(0);
+    vi.advanceTimersByTime(500);
 
     maker.handleMatchMessage(p1, { type: 'tap', slot: 1, seq: 1, clientTime: 1 });
     expect(one.fake.sent).toContainEqual(
@@ -146,6 +147,27 @@ describe('MatchMaker', () => {
     expect(hostSocket.fake.sent.some((message) => message.type === 'match_end')).toBe(false);
   });
 
+  it('does not start while a countdown player is disconnected', () => {
+    const maker = new MatchMaker({ countdownSeconds: 3, reconnectGraceMs: 5_000 });
+    makers.push(maker);
+    const one = socket();
+    const two = socket();
+    const p1 = register(maker, one.ws, P1, 'One');
+    const p2 = register(maker, two.ws, P2, 'Two');
+    maker.enqueue(p1);
+    maker.enqueue(p2);
+
+    maker.detach(two.ws, 'test');
+    vi.advanceTimersByTime(3_000);
+
+    expect(one.fake.sent.some((message) => message.type === 'match_start')).toBe(false);
+    const roomUpdates = one.fake.sent.filter(
+      (message): message is Extract<MpServerMessage, { type: 'room' }> =>
+        message.type === 'room',
+    );
+    expect(roomUpdates.at(-1)?.phase).toBe('lobby');
+  });
+
   it('expires reconnect grace into an authoritative forfeit', () => {
     const maker = new MatchMaker({ countdownSeconds: 0, reconnectGraceMs: 5_000 });
     makers.push(maker);
@@ -196,7 +218,7 @@ describe('MatchMaker', () => {
     maker.enqueue(p1);
     maker.enqueue(p2);
 
-    now = 120_001;
+    now = 120_501;
     monotonicNow = 16;
     (
       maker as unknown as {

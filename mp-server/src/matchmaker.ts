@@ -23,6 +23,7 @@ const MESSAGE_LIMIT = 120;
 const MESSAGE_WINDOW_MS = 10_000;
 const TAP_LIMIT = 30;
 const TAP_WINDOW_MS = 1_000;
+const MATCH_START_LEAD_MS = 500;
 
 export interface MatchMakerOptions {
   reconnectGraceMs?: number;
@@ -146,6 +147,7 @@ export class MatchMaker {
     }
 
     this.sendSession(session, this.roomPayload(room, session.playerId));
+    if (room.phase === 'lobby') this.maybeBeginMatch(room);
     const players = roomPlayersList(room);
     if (room.phase === 'countdown' && room.countdownSeconds !== null) {
       this.sendSession(session, {
@@ -271,8 +273,15 @@ export class MatchMaker {
     room.countdownSeconds = null;
   }
 
+  private allPlayersConnected(room: Room): boolean {
+    return (
+      room.players.size === 2 &&
+      [...room.players.keys()].every((playerId) => this.byPlayerId.get(playerId)?.connected)
+    );
+  }
+
   private maybeBeginMatch(room: Room): void {
-    if (room.players.size !== 2 || room.phase !== 'lobby') return;
+    if (!this.allPlayersConnected(room) || room.phase !== 'lobby') return;
     this.clearCountdown(room);
     room.phase = 'countdown';
     room.updatedAt = this.now();
@@ -291,8 +300,13 @@ export class MatchMaker {
       return;
     }
     room.countdownTimer = setInterval(() => {
-      if (room.phase !== 'countdown' || room.players.size !== 2) {
+      if (room.phase !== 'countdown' || !this.allPlayersConnected(room)) {
         this.clearCountdown(room);
+        if (room.phase === 'countdown') {
+          room.phase = 'lobby';
+          room.updatedAt = this.now();
+          this.notifyRoom(room);
+        }
         return;
       }
       room.countdownSeconds = (room.countdownSeconds ?? 1) - 1;
@@ -310,11 +324,11 @@ export class MatchMaker {
   }
 
   private startMatch(room: Room): void {
-    if (room.phase !== 'countdown' || room.players.size !== 2) return;
+    if (room.phase !== 'countdown' || !this.allPlayersConnected(room)) return;
     this.clearCountdown(room);
     room.phase = 'playing';
     room.updatedAt = this.now();
-    room.startAt = this.now();
+    room.startAt = this.now() + MATCH_START_LEAD_MS;
     room.tick = 0;
     room.snapshotSeq = 0;
     room.ackTapSeq = [0, 0];
@@ -357,6 +371,10 @@ export class MatchMaker {
     const monotonicNow = this.monotonicNow();
     for (const room of this.rooms.values()) {
       if (room.phase !== 'playing' || !room.game) continue;
+      if (room.startAt !== null && this.now() < room.startAt) {
+        room.lastSimAt = monotonicNow;
+        continue;
+      }
       const timeLeft = Math.max(
         0,
         VERSUS_DURATION_SEC - (this.now() - (room.startAt ?? this.now())) / 1_000,
@@ -402,7 +420,7 @@ export class MatchMaker {
     room.latestSnapshot = room.game.exportSnapshot(
       room.snapshotSeq,
       room.tick,
-      (room.startAt ?? this.now()) + (room.tick * 1_000) / 60,
+      this.now(),
       [...room.ackTapSeq],
     );
     this.broadcastRoom(room, { type: 'snapshot', state: room.latestSnapshot });
@@ -490,6 +508,18 @@ export class MatchMaker {
       });
       return;
     }
+    if (
+      [...room.players.keys()].some(
+        (playerId) => !this.byPlayerId.get(playerId)?.connected,
+      )
+    ) {
+      this.sendSession(session, {
+        type: 'error',
+        code: 'room_unavailable',
+        message: 'That room owner is reconnecting. Try again shortly.',
+      });
+      return;
+    }
     this.dequeue(session);
     this.leaveRoom(session);
     const usedSlots = new Set([...room.players.values()].map((player) => player.slot));
@@ -559,6 +589,7 @@ export class MatchMaker {
     const room = this.rooms.get(session.roomId);
     const member = room?.players.get(session.playerId);
     if (!room || !member || room.phase !== 'playing' || !room.game) return;
+    if (room.startAt !== null && this.now() < room.startAt) return;
     if (message.slot !== member.slot) {
       this.sendSession(session, {
         type: 'error',
@@ -591,7 +622,7 @@ export class MatchMaker {
       room.latestSnapshot = room.game.exportSnapshot(
         ++room.snapshotSeq,
         room.tick,
-        (room.startAt ?? this.now()) + (room.tick * 1_000) / 60,
+        this.now(),
         [...room.ackTapSeq],
       );
       this.broadcastRoom(room, { type: 'snapshot', state: room.latestSnapshot });

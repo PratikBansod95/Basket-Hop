@@ -1,6 +1,6 @@
 /** Shared multiplayer protocol (client <-> Railway WS server). */
 
-export const MP_PROTOCOL_VERSION = 4;
+export const MP_PROTOCOL_VERSION = 5;
 
 export interface MpPlayerInfo {
   playerId: string;
@@ -74,7 +74,13 @@ export type MpClientMessage =
 
 /** Server → client */
 export type MpServerMessage =
-  | { type: 'welcome'; playerId: string; nickname: string; resumeToken: string }
+  | {
+      type: 'welcome';
+      playerId: string;
+      nickname: string;
+      resumeToken: string;
+      serverTime: number;
+    }
   | { type: 'error'; code: string; message: string }
   | { type: 'queued' }
   | { type: 'queue_left' }

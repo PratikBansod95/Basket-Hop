@@ -112,6 +112,7 @@ async function handleMessage(ws: WebSocket, raw: string): Promise<void> {
       playerId: session.playerId,
       nickname: session.nickname,
       resumeToken: session.resumeToken,
+      serverTime: Date.now(),
     });
     if (resumed) matchMaker.restoreSessionState(session);
     return;
