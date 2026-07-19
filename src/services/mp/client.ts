@@ -200,7 +200,7 @@ export class MpClient {
     }
     const jitterSample = Math.abs(sample - previousRtt);
     this.jitterMs =
-      this.rttSamples <= 1 ? jitterSample : this.jitterMs * 0.8 + jitterSample * 0.2;
+      this.rttSamples <= 1 ? 0 : this.jitterMs * 0.8 + jitterSample * 0.2;
     if (Number.isFinite(serverTime) && serverTime > 0) {
       const offsetSample = serverTime + sample * 0.5 - now;
       this.serverClockOffsetMs =

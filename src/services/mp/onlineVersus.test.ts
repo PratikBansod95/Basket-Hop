@@ -121,11 +121,14 @@ describe('OnlineVersusSession', () => {
       const snapshot = state([0, 1], 1_000 + seq * 50);
       snapshot.seq = seq;
       snapshot.tick = seq * 3;
+      snapshot.hoop.x = 600 + seq * 8;
       snapshot.balls[1] = { ...snapshot.balls[1], hasLaunched: true, vy: -500 };
       serverNow = snapshot.serverTime + 140;
       session.bindMessage({ type: 'snapshot', state: snapshot });
       session.sampleRemoteState(seq * 16.7);
-      sampledTimes.push(session.getPresentationSnapshot()!.serverTime);
+      const presentation = session.getPresentationSnapshot()!;
+      sampledTimes.push(presentation.serverTime);
+      expect(game.hoop.x).toBeCloseTo(presentation.hoop.x);
     }
 
     for (let index = 1; index < sampledTimes.length; index += 1) {

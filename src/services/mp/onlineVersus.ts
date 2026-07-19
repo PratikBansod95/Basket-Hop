@@ -154,6 +154,9 @@ export class OnlineVersusSession {
       );
     }
     this.presentation = this.buffer.sampleAt(this.renderServerTime) ?? latest;
+    // The owned ball must collide against the same delayed hoop/world the
+    // player sees, otherwise high-jitter clients are corrected every snapshot.
+    this.game.applyAuthoritativeRemote(this.presentation, this.yourSlot, false);
   }
 
   handleLocalTap(): void {

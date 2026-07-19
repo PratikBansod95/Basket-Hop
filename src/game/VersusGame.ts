@@ -344,6 +344,7 @@ export class VersusGame {
           () => {},
           !target.hasLaunched,
         );
+        updateHoop(projectedHoop, dt);
         remaining -= dt;
       }
       cursor = targetTime;
@@ -706,7 +707,6 @@ export class VersusGame {
       !ball.hasLaunched,
     );
     this.tryClearFallThrough(own);
-    resolveBallBallCollision(this.balls[0], this.balls[1]);
 
     updateHoop(this.hoop, dt);
     if (this.effectsEnabled) updateHoopNet(this.hoop, ball, dt);

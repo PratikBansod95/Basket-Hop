@@ -395,6 +395,7 @@ export class MatchMaker {
       room.lastSimAt = monotonicNow;
       room.simAccumulator += elapsed;
       let steps = 0;
+      let snapshotDue = false;
       while (
         room.phase === 'playing' &&
         room.simAccumulator >= FIXED_DT &&
@@ -404,10 +405,9 @@ export class MatchMaker {
         room.game.update(FIXED_DT);
         room.simAccumulator -= FIXED_DT;
         steps += 1;
-        if (room.phase === 'playing' && room.tick % SNAPSHOT_EVERY_TICKS === 0) {
-          this.publishSnapshot(room);
-        }
+        if (room.tick % SNAPSHOT_EVERY_TICKS === 0) snapshotDue = true;
       }
+      if (room.phase === 'playing' && snapshotDue) this.publishSnapshot(room);
       if (steps === MAX_CATCHUP_STEPS && room.simAccumulator > FIXED_DT * MAX_CATCHUP_STEPS) {
         room.simAccumulator = FIXED_DT;
       }

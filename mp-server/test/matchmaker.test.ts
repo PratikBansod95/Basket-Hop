@@ -233,4 +233,33 @@ describe('MatchMaker', () => {
       }),
     );
   });
+
+  it('publishes only one snapshot after a catch-up burst', () => {
+    let now = 0;
+    let monotonicNow = 0;
+    const maker = new MatchMaker({
+      countdownSeconds: 0,
+      now: () => now,
+      monotonicNow: () => monotonicNow,
+    });
+    makers.push(maker);
+    const one = socket();
+    const two = socket();
+    const p1 = register(maker, one.ws, P1, 'One');
+    const p2 = register(maker, two.ws, P2, 'Two');
+    maker.enqueue(p1);
+    maker.enqueue(p2);
+    const before = one.fake.sent.filter((message) => message.type === 'snapshot').length;
+
+    now = 750;
+    monotonicNow = 750;
+    (
+      maker as unknown as {
+        advanceSimulations(): void;
+      }
+    ).advanceSimulations();
+
+    const after = one.fake.sent.filter((message) => message.type === 'snapshot').length;
+    expect(after - before).toBe(1);
+  });
 });

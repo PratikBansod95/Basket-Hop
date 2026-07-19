@@ -85,6 +85,15 @@ describe('MpClient socket generations', () => {
         serverTime: Date.now(),
       }),
     });
+    const pongAt = Date.now();
+    first.emit('message', {
+      data: JSON.stringify({
+        type: 'pong',
+        clientTime: pongAt - 280,
+        serverTime: pongAt - 140,
+      }),
+    });
+    expect(client.getJitterMs()).toBe(0);
     first.emit('close');
     vi.advanceTimersByTime(250);
     const resumed = FakeWebSocket.instances[1]!;
