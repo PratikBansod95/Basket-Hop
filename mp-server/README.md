@@ -19,8 +19,9 @@ WS: `ws://localhost:8787`
 ## Railway deploy
 
 1. New project → **Deploy from GitHub** → select `Basket-Hop`
-2. Keep the repository root as the build context and set the Dockerfile path to
-   `mp-server/Dockerfile`. The server imports shared physics from `src/game`.
+2. Keep the repository root as the service root. Railway discovers the root
+   `railway.json`, which selects `mp-server/Dockerfile`; the server imports
+   shared physics from `src/game`.
 3. Variables:
    - `DATABASE_URL` = Basket Hop Neon pooled URL (same DB as Vercel)
    - `MP_ALLOWED_ORIGINS` = comma-separated exact web origins, for example

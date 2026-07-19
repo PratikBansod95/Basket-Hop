@@ -283,6 +283,7 @@ async function main(): Promise<void> {
     onlineSession = new OnlineVersusSession(mp, versusGame, {
       onCountdown: () => {},
       onMatchStart: ({ yourSlot, players }) => {
+        versusHud.clearStatus();
         const p1 = players.find((p) => p.slot === 0)?.nickname ?? 'P1';
         const p2 = players.find((p) => p.slot === 1)?.nickname ?? 'P2';
         onlineLabels = { p1, p2 };
@@ -304,6 +305,10 @@ async function main(): Promise<void> {
         setMenuFxVisible(false);
       },
       onMatchEnd: (result) => showOnlineResult(result),
+      onStatus: (text) => {
+        if (text) versusHud.setStatus(text);
+        else versusHud.clearStatus();
+      },
     });
 
     mp.setHandlers({

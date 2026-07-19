@@ -179,4 +179,36 @@ describe('MatchMaker', () => {
     expect(maker.allowMessage(session, true)).toBe(false);
     expect(one.fake.closeCode).toBe(4008);
   });
+
+  it('ends from wall-clock time even when simulation ticks fall behind', () => {
+    let now = 0;
+    let monotonicNow = 0;
+    const maker = new MatchMaker({
+      countdownSeconds: 0,
+      now: () => now,
+      monotonicNow: () => monotonicNow,
+    });
+    makers.push(maker);
+    const one = socket();
+    const two = socket();
+    const p1 = register(maker, one.ws, P1, 'One');
+    const p2 = register(maker, two.ws, P2, 'Two');
+    maker.enqueue(p1);
+    maker.enqueue(p2);
+
+    now = 120_001;
+    monotonicNow = 16;
+    (
+      maker as unknown as {
+        advanceSimulations(): void;
+      }
+    ).advanceSimulations();
+
+    expect(one.fake.sent).toContainEqual(
+      expect.objectContaining({
+        type: 'match_end',
+        result: expect.objectContaining({ reason: 'timer' }),
+      }),
+    );
+  });
 });

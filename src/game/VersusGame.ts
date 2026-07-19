@@ -96,6 +96,7 @@ export class VersusGame {
   networkMode: 'authority' | 'puppet' = 'authority';
   puppetOwnSlot: VersusPlayerId = 0;
   effectsEnabled = true;
+  externalClock = false;
 
   constructor(
     private launchMechanic: LaunchMechanic,
@@ -140,8 +141,10 @@ export class VersusGame {
     this.shakeTimer = 0;
     this.bounceCooldown = 0;
     this.clearBelowY = [0, 0];
-    resetHoopNet(this.hoop);
-    if (this.effectsEnabled) clearParticles();
+    if (this.effectsEnabled) {
+      resetHoopNet(this.hoop);
+      clearParticles();
+    }
     this.launchMechanic.reset();
     this.syncRenderPrev();
   }
@@ -573,7 +576,7 @@ export class VersusGame {
     this.targetClimbOffset += CLIMB_PER_BASKET;
     this.climbAnimating = true;
     onBasket(this.hoop, this.targetClimbOffset);
-    resetHoopNet(this.hoop);
+    if (this.effectsEnabled) resetHoopNet(this.hoop);
 
     if (this.effectsEnabled) {
       const q = getRenderQuality();
@@ -601,10 +604,12 @@ export class VersusGame {
 
     if (this.phase === GamePhase.Playing || this.phase === GamePhase.Idle) {
       if (this.phase === GamePhase.Playing) {
-        this.timeLeft = Math.max(0, this.timeLeft - dt);
-        if (this.timeLeft <= 0) {
-          this.finishMatch();
-          return;
+        if (!this.externalClock) {
+          this.timeLeft = Math.max(0, this.timeLeft - dt);
+          if (this.timeLeft <= 0) {
+            this.finishMatch();
+            return;
+          }
         }
       }
 
@@ -635,7 +640,7 @@ export class VersusGame {
         this.balls[0].hasLaunched || !this.balls[1].hasLaunched
           ? this.balls[0]
           : this.balls[1];
-      updateHoopNet(this.hoop, netBall, dt);
+      if (this.effectsEnabled) updateHoopNet(this.hoop, netBall, dt);
       if (this.effectsEnabled) updateParticles(dt);
 
       if (!this.hoop.animating && !this.climbAnimating) {
@@ -701,7 +706,7 @@ export class VersusGame {
     resolveBallBallCollision(this.balls[0], this.balls[1]);
 
     updateHoop(this.hoop, dt);
-    updateHoopNet(this.hoop, ball, dt);
+    if (this.effectsEnabled) updateHoopNet(this.hoop, ball, dt);
     if (this.effectsEnabled) updateParticles(dt);
 
     if (bounced && this.bounceCooldown <= 0) {

@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { WebSocket } from 'ws';
 import { VersusGame, type VersusResult } from '../../src/game/VersusGame.js';
 import { DefaultTapLaunch } from '../../src/game/mechanics/defaultTapLaunch.js';
+import { VERSUS_DURATION_SEC } from '../../src/game/constants.js';
 import {
   MATCH_COUNTDOWN_SEC,
   makeRoomCode,
@@ -328,6 +329,7 @@ export class MatchMaker {
       onSwoosh: () => undefined,
     });
     game.effectsEnabled = false;
+    game.externalClock = true;
     game.reset();
     game.startPlaying();
     room.game = game;
@@ -355,6 +357,22 @@ export class MatchMaker {
     const monotonicNow = this.monotonicNow();
     for (const room of this.rooms.values()) {
       if (room.phase !== 'playing' || !room.game) continue;
+      const timeLeft = Math.max(
+        0,
+        VERSUS_DURATION_SEC - (this.now() - (room.startAt ?? this.now())) / 1_000,
+      );
+      room.game.timeLeft = timeLeft;
+      if (timeLeft <= 0) {
+        const scoreP1 = room.game.scoreP1;
+        const scoreP2 = room.game.scoreP2;
+        this.finishMatch(room, {
+          scoreP1,
+          scoreP2,
+          winner: scoreP1 === scoreP2 ? 'draw' : scoreP1 > scoreP2 ? 'p1' : 'p2',
+          reason: 'timer',
+        });
+        continue;
+      }
       const elapsed = Math.min(0.25, Math.max(0, (monotonicNow - room.lastSimAt) / 1000));
       room.lastSimAt = monotonicNow;
       room.simAccumulator += elapsed;

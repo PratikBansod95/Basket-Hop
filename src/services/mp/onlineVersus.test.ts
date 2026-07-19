@@ -57,6 +57,19 @@ describe('OnlineVersusSession', () => {
 
     session.bindMessage({ type: 'snapshot', state: state([0, 0]) });
     expect(game.balls[0].hasLaunched).toBe(true);
+    session.bindMessage({
+      type: 'match_start',
+      roomId: 'room',
+      yourSlot: 0,
+      youAreHost: false,
+      players: [
+        { playerId: 'one', nickname: 'One', slot: 0 },
+        { playerId: 'two', nickname: 'Two', slot: 1 },
+      ],
+      startAt: 1_000,
+    });
+    expect(sent.filter((message) => message.type === 'tap')).toHaveLength(2);
+    expect(game.balls[0].hasLaunched).toBe(true);
 
     const acknowledged = state([1, 0], 1_050);
     acknowledged.seq = 2;

@@ -11,6 +11,8 @@ export class VersusHud {
   private lastP1 = -1;
   private lastP2 = -1;
   private lastPing = -1;
+  private defaultHint = 'Left tap = P1 · Right tap = P2';
+  private statusText: string | null = null;
 
   constructor(rootId = 'versus-hud') {
     this.root = document.getElementById(rootId)!;
@@ -54,12 +56,22 @@ export class VersusHud {
   setLabels(p1: string, p2: string, hint: string): void {
     this.p1Tag.textContent = p1;
     this.p2Tag.textContent = p2;
-    this.hintEl.textContent = hint;
+    this.defaultHint = hint;
+    if (this.statusText === null) this.hintEl.textContent = hint;
   }
 
   setStatus(text: string): void {
+    this.statusText = text || null;
+    if (this.statusText === null) {
+      this.hintEl.textContent = this.defaultHint;
+      return;
+    }
     this.hintEl.textContent = text;
     this.hintEl.style.display = 'block';
+  }
+
+  clearStatus(): void {
+    this.setStatus('');
   }
 
   setPing(rttMs: number | null): void {
@@ -122,6 +134,7 @@ export class VersusHud {
       this.lastTimer = label;
     }
 
-    this.hintEl.style.display = anyLaunched ? 'none' : 'block';
+    this.hintEl.style.display =
+      this.statusText !== null || !anyLaunched ? 'block' : 'none';
   }
 }

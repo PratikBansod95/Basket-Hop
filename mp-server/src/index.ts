@@ -24,8 +24,6 @@ const helloSeen = new WeakSet<WebSocket>();
 const preAuthRates = new WeakMap<WebSocket, { startedAt: number; count: number }>();
 
 async function handleMessage(ws: WebSocket, raw: string): Promise<void> {
-  const existingSession = matchMaker.getSession(ws);
-  if (existingSession && !matchMaker.allowMessage(existingSession, false)) return;
   const parsed = validateClientMessage(raw);
   if (!parsed.ok) {
     matchMaker.send(ws, { type: 'error', code: parsed.code, message: parsed.message });
@@ -82,6 +80,10 @@ async function handleMessage(ws: WebSocket, raw: string): Promise<void> {
         message: 'Register a nickname in the game before online versus.',
       });
       log('auth_rejected', { playerId: message.playerId, reason: 'unregistered' });
+      return;
+    }
+    if (ws.readyState !== 1) {
+      log('auth_abandoned', { playerId: message.playerId, reason: 'socket_closed' });
       return;
     }
 
@@ -198,8 +200,30 @@ const wss = new WebSocketServer({
   },
 });
 
+function allowInboundFrame(ws: WebSocket): boolean {
+  const session = matchMaker.getSession(ws);
+  if (session) return matchMaker.allowMessage(session, false);
+
+  const now = Date.now();
+  const rate = preAuthRates.get(ws) ?? { startedAt: now, count: 0 };
+  if (now - rate.startedAt >= 10_000) {
+    rate.startedAt = now;
+    rate.count = 0;
+  }
+  rate.count += 1;
+  preAuthRates.set(ws, rate);
+  if (rate.count <= 30) return true;
+  try {
+    ws.close(4008, 'rate limit');
+  } catch {
+    // Socket may already be closing.
+  }
+  return false;
+}
+
 wss.on('connection', (ws) => {
   ws.on('message', (data, isBinary) => {
+    if (!allowInboundFrame(ws)) return;
     if (isBinary) {
       matchMaker.send(ws, {
         type: 'error',
@@ -207,24 +231,6 @@ wss.on('connection', (ws) => {
         message: 'Binary messages are not supported.',
       });
       return;
-    }
-    if (!matchMaker.getSession(ws)) {
-      const now = Date.now();
-      const rate = preAuthRates.get(ws) ?? { startedAt: now, count: 0 };
-      if (now - rate.startedAt >= 10_000) {
-        rate.startedAt = now;
-        rate.count = 0;
-      }
-      rate.count += 1;
-      preAuthRates.set(ws, rate);
-      if (rate.count > 30) {
-        try {
-          ws.close(4008, 'rate limit');
-        } catch {
-          // Socket may already be closing.
-        }
-        return;
-      }
     }
     const raw = typeof data === 'string' ? data : data.toString('utf8');
     void handleMessage(ws, raw);
