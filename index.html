@@ -291,9 +291,17 @@
         <div class="league-frame">
           <div class="league-frame-inner">
             <header class="league-banner">
-              <p class="league-kicker">Global leaderboard</p>
-              <h2 class="league-title" id="leaderboard-title">Court ranks</h2>
-              <p class="league-subtitle">Highest solo scores across the rooftops</p>
+              <div class="league-emblem" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M8 4h8v3a4 4 0 01-8 0V4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  <path d="M6 4H4a2 2 0 002 2M18 4h2a2 2 0 01-2 2M12 11v4M8.5 20h7M10 15h4l1.5 5h-7l1.5-5z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="league-heading">
+                <p class="league-kicker">Global leaderboard</p>
+                <h2 class="league-title" id="leaderboard-title">Court ranks</h2>
+                <p class="league-subtitle">Top solo scores from every rooftop</p>
+              </div>
             </header>
             <div class="league-body">
               <p id="leaderboardLoading" class="league-status league-loading hidden">Loading scores...</p>
@@ -307,7 +315,14 @@
                 <div id="leaderboardList" class="league-list"></div>
               </div>
             </div>
-            <button id="btn-leaderboard-close" class="ui-btn ui-btn-primary league-back-btn" type="button">Back</button>
+            <footer class="league-footer">
+              <button id="btn-leaderboard-close" class="league-back-btn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Back to menu
+              </button>
+            </footer>
           </div>
         </div>
       </div>

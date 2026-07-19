@@ -245,25 +245,30 @@
 
 .leaderboard-overlay {
   z-index: 18;
-  align-items: stretch;
-  padding-top: max(12px, env(safe-area-inset-top, 0px));
-  padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  align-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px))
+    max(16px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+  background: rgba(7, 17, 31, 0.58);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .league-frame {
-  width: min(100%, 418px);
+  width: min(94cqw, 410px);
+  height: min(88cqh, 700px);
   margin: auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  max-height: min(92dvh, 704px);
-  padding: 9px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, #2a3d5c 0%, #1a2b48 100%);
+  overflow: hidden;
+  padding: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.08));
   box-shadow:
-    0 16px 40px rgba(0, 0, 0, 0.45),
-    inset 0 2px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+    0 28px 70px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(5, 12, 24, 0.12);
+  animation: panel-rise 0.4s var(--ease-out);
 }
 
 .league-frame-inner {
@@ -272,87 +277,136 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  border-radius: 14px;
-  border: 3px solid rgba(10, 16, 28, 0.55);
-  background:
-    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255, 122, 24, 0.18), transparent 55%),
-    linear-gradient(180deg, #f8f3ea 0%, #ebe3d4 100%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  border-radius: 27px;
+  background: #f5f7fa;
 }
 
 .league-banner {
-  padding: 14px 16px 8px;
-  text-align: center;
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  padding: 20px 20px 18px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(255, 158, 61, 0.28), transparent 30%),
+    linear-gradient(135deg, #172b48 0%, #0d1d33 100%);
+  text-align: left;
+}
+
+.league-banner::after {
+  content: '';
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 158, 61, 0.8), rgba(255, 255, 255, 0.08));
+}
+
+.league-emblem {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(145deg, #ff9e3d, #ff6411);
+  box-shadow: 0 10px 24px rgba(221, 75, 8, 0.28);
+}
+
+.league-emblem svg {
+  width: 27px;
+  height: 27px;
+}
+
+.league-heading {
+  min-width: 0;
 }
 
 .league-kicker {
-  margin: 0 0 4px;
-  color: var(--menu-orange);
+  margin: 0 0 3px;
+  color: rgba(255, 183, 115, 0.9);
   font-family: var(--font-body);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
-  letter-spacing: 1.7px;
+  line-height: 1.2;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 
 .league-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(26px, 6.5cqw, 34px);
-  letter-spacing: 0.06em;
-  color: var(--menu-navy);
+  font-size: clamp(28px, 7cqw, 35px);
+  line-height: 1;
+  letter-spacing: 0.045em;
+  color: #fff;
   text-transform: uppercase;
 }
 
 .league-subtitle {
   margin: 5px 0 0;
-  color: var(--menu-navy-soft);
+  color: rgba(226, 234, 245, 0.68);
   font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .league-body {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  padding: 0 11px;
-  --league-visible-rows: 5;
-  --league-row-size: 52px;
-  --league-row-gap: 8px;
+  padding: 16px 14px 10px;
+  --league-row-size: 58px;
+  --league-row-gap: 9px;
 }
 
 .league-status {
-  margin: 0 0 7px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
   text-align: center;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 1.35;
 }
 
 .league-loading {
   color: var(--menu-navy);
+  background: rgba(26, 43, 72, 0.06);
 }
 
 .league-error {
   color: #c62828;
+  background: rgba(198, 40, 40, 0.08);
 }
 
 .league-columns {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
+  grid-template-columns: 40px 36px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  margin: 0 4px 8px;
-  padding: 0 8px;
+  margin: 0 0 9px;
+  padding: 0 11px;
   color: var(--menu-navy-soft);
   font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.league-columns span:nth-child(2) {
+  grid-column: 2 / 4;
 }
 
 .league-columns span:last-child {
@@ -360,13 +414,22 @@
 }
 
 .league-scroll {
-  height: calc(
-    var(--league-row-size) * var(--league-visible-rows) +
-      var(--league-row-gap) * (var(--league-visible-rows) - 1)
-  );
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  padding-bottom: 8px;
+  padding: 0 2px 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(26, 43, 72, 0.2) transparent;
   -webkit-overflow-scrolling: touch;
+}
+
+.league-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.league-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(26, 43, 72, 0.2);
 }
 
 .league-list {
@@ -381,33 +444,37 @@
   align-items: center;
   gap: 8px;
   min-height: var(--league-row-size, 52px);
-  padding: 8px 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(26, 43, 72, 0.1);
+  padding: 9px 11px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(26, 43, 72, 0.08);
+  box-shadow: 0 6px 18px rgba(20, 36, 60, 0.055);
 }
 
 .league-row.is-player {
-  background: rgba(255, 122, 24, 0.14);
-  border-color: rgba(255, 122, 24, 0.45);
+  background: linear-gradient(100deg, rgba(255, 106, 19, 0.14), #fff 72%);
+  border-color: rgba(255, 106, 19, 0.45);
+  box-shadow: 0 8px 20px rgba(225, 79, 10, 0.09);
 }
 
 .league-row.is-gold {
-  background: linear-gradient(90deg, rgba(255, 193, 77, 0.35), rgba(255, 255, 255, 0.7));
+  background: linear-gradient(100deg, rgba(255, 193, 77, 0.3), #fff 72%);
+  border-color: rgba(214, 155, 29, 0.26);
 }
 
 .league-row.is-silver {
-  background: linear-gradient(90deg, rgba(180, 190, 210, 0.4), rgba(255, 255, 255, 0.7));
+  background: linear-gradient(100deg, rgba(190, 202, 220, 0.34), #fff 72%);
 }
 
 .league-row.is-bronze {
-  background: linear-gradient(90deg, rgba(205, 140, 90, 0.32), rgba(255, 255, 255, 0.7));
+  background: linear-gradient(100deg, rgba(205, 140, 90, 0.26), #fff 72%);
 }
 
 .league-rank {
   font-family: var(--font-display);
-  font-size: 18px;
-  letter-spacing: 0.04em;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0;
   color: var(--menu-navy);
 }
 
@@ -419,9 +486,12 @@
   place-items: center;
   color: #fff;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  line-height: 1;
+  box-shadow:
+    0 3px 9px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .league-name {
@@ -430,26 +500,29 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
   color: var(--menu-navy);
 }
 
 .league-score {
   font-family: var(--font-display);
-  font-size: 20px;
-  letter-spacing: 0.04em;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.02em;
   color: var(--menu-navy);
   text-align: right;
 }
 
 .league-divider {
-  margin: 4px 0;
+  margin: 7px 0 4px;
   text-align: center;
   color: var(--menu-navy-soft);
   font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.2;
   letter-spacing: 0.12em;
 }
 
@@ -463,10 +536,70 @@
   line-height: 1.4;
 }
 
+.league-footer {
+  flex: 0 0 auto;
+  padding: 10px 14px 14px;
+  background: #f5f7fa;
+}
+
 .league-back-btn {
-  margin: 10px 14px 14px;
-  width: calc(100% - 28px);
-  min-height: 48px;
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(19, 36, 61, 0.08);
+  border-radius: 16px;
+  background: var(--menu-navy);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(19, 36, 61, 0.2);
+  transition: transform 0.16s var(--ease-out), background 0.16s ease;
+}
+
+.league-back-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+.league-back-btn:active {
+  transform: scale(0.985);
+  background: #0b192c;
+}
+
+@container game-stage (max-height: 640px) {
+  .league-frame {
+    height: min(92cqh, 590px);
+  }
+
+  .league-banner {
+    padding: 14px 16px 13px;
+  }
+
+  .league-emblem {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+  }
+
+  .league-body {
+    padding-top: 11px;
+    --league-row-size: 52px;
+    --league-row-gap: 7px;
+  }
+
+  .league-footer {
+    padding-top: 7px;
+  }
+
+  .league-back-btn {
+    min-height: 46px;
+  }
 }
 
 /* Versus HUD + result */
