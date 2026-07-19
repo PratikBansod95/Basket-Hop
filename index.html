@@ -370,16 +370,24 @@
       <div id="skins-shop" class="skins-shop hidden" aria-label="Basketball skins shop">
         <div class="skins-shop-panel">
           <header class="skins-shop-header">
+            <div class="skins-shop-emblem" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M12 4v16M5.5 8.5c3 2 10 2 13 0M5.5 15.5c3-2 10-2 13 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
             <div class="skins-shop-heading">
-              <p class="skins-shop-kicker">Basket Hop</p>
-              <h2 class="skins-shop-title">Basketball Skins</h2>
-              <p class="skins-shop-subtitle">Collect. Unlock. Flex.</p>
+              <p class="skins-shop-kicker">Your collection</p>
+              <h2 class="skins-shop-title">Ball locker</h2>
+              <p class="skins-shop-subtitle">Choose your look for the next run</p>
             </div>
-            <div class="skins-shop-wallet-wrap" aria-label="Coin wallet">
-              <span class="skins-shop-wallet-coin" aria-hidden="true"></span>
-              <span id="skins-shop-wallet">0</span>
+            <div class="skins-shop-header-actions">
+              <div class="skins-shop-wallet-wrap" aria-label="Coin wallet">
+                <span class="skins-shop-wallet-coin" aria-hidden="true"></span>
+                <span id="skins-shop-wallet">0</span>
+              </div>
+              <button type="button" class="skins-shop-close" id="skins-shop-close" aria-label="Close shop">×</button>
             </div>
-            <button type="button" class="skins-shop-close" id="skins-shop-close" aria-label="Close shop">×</button>
           </header>
 
           <div class="skins-shop-filters" role="tablist" aria-label="Filter by rarity">
@@ -393,7 +401,18 @@
 
           <div class="skins-shop-grid" id="skins-shop-grid"></div>
 
-          <p class="skins-shop-footer">More skins coming soon — keep hopping!</p>
+          <footer class="skins-shop-footer">
+            <div class="skins-shop-selection">
+              <span>Selected ball</span>
+              <strong id="skins-shop-selected-name">Classic</strong>
+            </div>
+            <button type="button" class="skins-shop-confirm" id="skins-shop-confirm">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 12l4 4L19 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span id="skins-shop-confirm-label">Use selected</span>
+            </button>
+          </footer>
         </div>
       </div>
 
