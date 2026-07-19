@@ -19,7 +19,7 @@ const TUTORIAL_SIM_STEPS = 150;
 export const TUTORIAL_PROMPT_FIRST = 'Tap again to steer the ball';
 export const TUTORIAL_PROMPT_SECOND = 'Keep tapping to guide the ball';
 export const TUTORIAL_MAX_STEPS = 2;
-export const STAMINA_TUTORIAL_PROMPT = 'Each mid-air tap uses stamina\nTime your moves';
+export const STAMINA_TUTORIAL_PROMPT = 'Mid-air taps use stamina — time your moves';
 
 export interface TutorialProbeState {
   phase: GamePhase;
