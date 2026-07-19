@@ -68,10 +68,8 @@ export function render(
   if (colliders) drawDebugColliders(ctx, colliders);
   ctx.restore();
 
-  if (ball.hasLaunched) {
-    const ballScreenY = screenY(ball.y, state.climbOffset);
-    drawDangerZones(ctx, state.time, ballScreenY, ball.radius);
-  }
+  const ballScreenY = screenY(ball.y, state.climbOffset);
+  drawDangerZones(ctx, state.time, ballScreenY, ball.radius);
 }
 
 /** Versus: two balls, no coins, no danger zones. */

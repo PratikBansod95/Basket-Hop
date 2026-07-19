@@ -11,17 +11,15 @@ export function drawDangerZones(
 ): void {
   const quality = getRenderQuality();
   const pulse = quality === 'low' ? 0.75 : 0.72 + Math.sin(time * 3.2) * 0.14;
-  let urgency = 1;
+  let urgency = 0.5;
 
   if (ballScreenY !== undefined && ballRadius > 0) {
     const distTop = ballScreenY - ballRadius - DEATH_MARGIN;
     const distBottom = CANVAS_HEIGHT - DEATH_MARGIN - (ballScreenY + ballRadius);
     const nearest = Math.min(distTop, distBottom);
-    // Keep the court clean until the ball is actually approaching danger.
-    if (nearest > 190) return;
-    if (nearest < 100) {
-      urgency = 1 + (1 - Math.max(0, nearest) / 100) * 0.75;
-    }
+    const proximity = 1 - Math.min(1, Math.max(0, nearest) / 190);
+    // Boundaries remain readable while safe and intensify near an edge.
+    urgency = 0.5 + proximity * 1.25;
   }
 
   const alpha = Math.min(1, pulse * urgency);
