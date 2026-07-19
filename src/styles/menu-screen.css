@@ -30,7 +30,7 @@
 .menu-screen-bg {
   position: absolute;
   inset: -3%;
-  background: url('/assets/menu-scene-bg.png') center 42% / cover no-repeat;
+  background: url('/assets/menu-scene-bg-light.webp') center center / cover no-repeat;
   pointer-events: none;
   animation: menu-bg-drift 22s ease-in-out infinite alternate;
   will-change: transform;
@@ -41,8 +41,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(5, 11, 22, 0.5) 0%, rgba(8, 15, 28, 0.04) 32%, transparent 47%, rgba(4, 10, 20, 0.16) 63%, rgba(3, 7, 15, 0.82) 100%),
-    radial-gradient(ellipse 88% 38% at 50% 17%, rgba(80, 157, 219, 0.11), transparent 72%);
+    linear-gradient(180deg, rgba(12, 36, 60, 0.16) 0%, rgba(12, 36, 60, 0.02) 38%, transparent 54%, rgba(6, 21, 39, 0.12) 68%, rgba(3, 12, 24, 0.5) 100%),
+    radial-gradient(ellipse 80% 38% at 76% 50%, rgba(255, 210, 152, 0.12), transparent 72%);
   pointer-events: none;
 }
 
@@ -51,7 +51,7 @@
     transform: scale(1) translate3d(0, 0, 0);
   }
   to {
-    transform: scale(1.05) translate3d(0, -1.2%, 0);
+    transform: scale(1.035) translate3d(0, -0.8%, 0);
   }
 }
 
