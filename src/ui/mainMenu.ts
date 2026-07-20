@@ -1,18 +1,8 @@
 import type { SaveData } from '../platform/types';
-import { SKIN_CATALOG } from '../shop/skins';
 
 function cleanPercent(save: SaveData): string {
   if (save.totalShots <= 0) return '—';
   return `${Math.round((save.cleanShots / save.totalShots) * 100)}%`;
-}
-
-function hasAffordableUnownedSkin(save: SaveData): boolean {
-  return SKIN_CATALOG.some(
-    (skin) =>
-      skin.price > 0 &&
-      !save.ownedSkins.includes(skin.id) &&
-      save.coins >= skin.price,
-  );
 }
 
 export class MainMenu {
@@ -31,7 +21,6 @@ export class MainMenu {
   private statsCoinsEl: HTMLElement;
   private statsGamesEl: HTMLElement;
   private statsCleanEl: HTMLElement;
-  private shopBadgeEl: HTMLElement;
   private onStart: () => void;
   private onVersus: (() => void) | null = null;
   private onMuteToggle: (() => void) | null = null;
@@ -66,7 +55,6 @@ export class MainMenu {
     this.statsCoinsEl = document.getElementById('stats-coins')!;
     this.statsGamesEl = document.getElementById('stats-games')!;
     this.statsCleanEl = document.getElementById('stats-clean')!;
-    this.shopBadgeEl = this.root.querySelector('#menu-shop-badge')!;
 
     this.root.querySelector('#start-btn')!.addEventListener('click', () => {
       this.closeAllModals();
@@ -123,11 +111,6 @@ export class MainMenu {
       this.onOpenSkinsShop?.();
     });
 
-    this.root.querySelector('#menu-wallet-plus')!.addEventListener('click', () => {
-      this.closeAllModals();
-      this.onOpenSkinsShop?.();
-    });
-
     this.root.querySelector('#dock-howto')!.addEventListener('click', () => {
       this.showHowTo();
     });
@@ -163,7 +146,6 @@ export class MainMenu {
     this.statsCoinsEl.textContent = wallet;
     this.statsGamesEl.textContent = String(save.totalGames);
     this.statsCleanEl.textContent = cleanPercent(save);
-    this.shopBadgeEl.classList.toggle('hidden', !hasAffordableUnownedSkin(save));
     this.root.classList.remove('hidden');
   }
 
@@ -226,6 +208,5 @@ export class MainMenu {
     this.coinsEl.textContent = wallet;
     this.topCoinsEl.textContent = wallet;
     this.statsCoinsEl.textContent = wallet;
-    this.shopBadgeEl.classList.toggle('hidden', !hasAffordableUnownedSkin(save));
   }
 }
