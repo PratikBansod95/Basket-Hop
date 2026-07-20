@@ -7,18 +7,19 @@ function drawMotionTrails(
   anchorX: number,
   anchorY: number,
 ): void {
+  // Trails stay on the outer/right side so they never cut through the title.
   for (let i = 0; i < 3; i += 1) {
     const phase = time * 2 + i * 0.6;
-    const x = anchorX - 70 - i * 32;
-    const y = anchorY + 6 + i * 5 + Math.sin(phase) * 4;
-    const alpha = 0.45 - i * 0.12;
+    const x = anchorX + 18 + i * 22;
+    const y = anchorY + 10 + i * 4 + Math.sin(phase) * 3;
+    const alpha = 0.4 - i * 0.1;
 
     ctx.save();
     ctx.strokeStyle = `rgba(255, 122, 24, ${alpha})`;
-    ctx.lineWidth = 4 - i * 0.5;
+    ctx.lineWidth = 3.5 - i * 0.45;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.ellipse(x, y, 14 - i * 2, 5 - i, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(x, y, 11 - i * 1.5, 4 - i * 0.4, 0.35, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
@@ -31,9 +32,10 @@ export function renderMenuHomeFx(
 ): void {
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  const x = CANVAS_WIDTH * 0.76 + Math.sin(time * 1.6) * 8;
-  const y = CANVAS_HEIGHT * 0.195 + Math.sin(time * 2.2) * 6;
-  const radius = 32;
+  // Sit beside HOP in the reserved right gutter — clear of title + tagline.
+  const x = CANVAS_WIDTH * 0.78 + Math.sin(time * 1.6) * 5;
+  const y = CANVAS_HEIGHT * 0.205 + Math.sin(time * 2.2) * 4;
+  const radius = 30;
 
   drawMotionTrails(ctx, time, x, y);
 
