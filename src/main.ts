@@ -25,7 +25,17 @@ import { renderMenuHomeFx } from './ui/menuHome3d';
 import { SkinsShop } from './ui/skinsShop';
 import { NicknameGate } from './ui/nicknameGate';
 import { LeaderboardOverlay } from './ui/leaderboardOverlay';
-import { bindStageResize, computeStageLayout, layoutsEqual, applyResponsiveCssVars, syncSafeAreaCssVars, type StageLayout } from './ui/stageLayout';
+import {
+  applyAppShellClass,
+  applyResponsiveCssVars,
+  bindStageResize,
+  computeStageLayout,
+  detectStageFit,
+  getViewportSize,
+  layoutsEqual,
+  syncSafeAreaCssVars,
+  type StageLayout,
+} from './ui/stageLayout';
 import { FIXED_DT, stepFixed } from './game/physics';
 import {
   freezeRenderQuality,
@@ -176,7 +186,15 @@ async function main(): Promise<void> {
 
   function resize(): void {
     syncSafeAreaCssVars();
-    const layout = computeStageLayout(appRoot.clientWidth, appRoot.clientHeight);
+    const fit = detectStageFit();
+    applyAppShellClass(fit === 'cover');
+
+    // Cover mode fills the true WebView; contain uses the padded #app box.
+    const viewport = fit === 'cover' ? getViewportSize() : {
+      width: appRoot.clientWidth,
+      height: appRoot.clientHeight,
+    };
+    const layout = computeStageLayout(viewport.width, viewport.height, undefined, fit);
     applyResponsiveCssVars(canvasStage, layout, appRoot);
 
     if (layoutsEqual(lastLayout, layout)) return;
@@ -184,6 +202,8 @@ async function main(): Promise<void> {
 
     canvasStage.style.width = `${layout.width}px`;
     canvasStage.style.height = `${layout.height}px`;
+    canvasStage.style.maxWidth = fit === 'cover' ? 'none' : '';
+    canvasStage.style.maxHeight = fit === 'cover' ? 'none' : '';
 
     for (const c of [canvas, menuFxCanvas]) {
       c.width = Math.round(CANVAS_WIDTH * layout.dpr);

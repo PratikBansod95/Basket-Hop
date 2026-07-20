@@ -8,6 +8,8 @@ export interface SafeInsets {
   left: number;
 }
 
+export type StageFit = 'contain' | 'cover';
+
 export interface StageLayout {
   /** Scale factor from design canvas (720×1280) to on-screen stage CSS pixels. */
   scale: number;
@@ -17,6 +19,7 @@ export interface StageLayout {
   viewWidth: number;
   viewHeight: number;
   safe: SafeInsets;
+  fit: StageFit;
 }
 
 const DESIGN_WIDTH = CANVAS_WIDTH;
@@ -34,7 +37,6 @@ export function readSafeInsets(): SafeInsets {
     const v = Number.parseFloat(raw);
     return Number.isFinite(v) ? v : 0;
   };
-  // Prefer CSS env() resolved on :root via custom props we set, else 0.
   return {
     top: num('--sat') || 0,
     right: num('--sar') || 0,
@@ -64,19 +66,50 @@ export function getViewportSize(): { width: number; height: number } {
 }
 
 /**
- * Fit the full game canvas inside the safe viewport (contain).
- * Preserves 9:16 aspect; letterboxes empty space in #app.
+ * Android WebView shell appends `BasketHopAndroid/...` to the UA.
+ * `?app=1` / `?fit=cover` also force cover-fill for local testing.
+ */
+export function detectStageFit(): StageFit {
+  if (typeof window === 'undefined') return 'contain';
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const fit = params.get('fit');
+    if (fit === 'cover' || params.get('app') === '1') return 'cover';
+    if (fit === 'contain') return 'contain';
+  } catch {
+    // ignore
+  }
+  if (/BasketHopAndroid/i.test(navigator.userAgent || '')) return 'cover';
+  return 'contain';
+}
+
+export function applyAppShellClass(enabled: boolean, root: HTMLElement = document.documentElement): void {
+  root.classList.toggle('app-shell', enabled);
+  document.body?.classList.toggle('app-shell', enabled);
+  document.getElementById('app')?.classList.toggle('app-shell', enabled);
+}
+
+/**
+ * Fit the design canvas into the viewport.
+ * - contain: letterbox (browser / YouTube playables)
+ * - cover: fill WebView, crop sides/top on non-9:16 phones (Android shell)
+ *
+ * Physics and drawing stay in fixed 720×1280 design space either way.
  */
 export function computeStageLayout(
   viewWidth: number,
   viewHeight: number,
   safe: SafeInsets = { top: 0, right: 0, bottom: 0, left: 0 },
+  fit: StageFit = 'contain',
 ): StageLayout {
-  const padX = safe.left + safe.right;
-  const padY = safe.top + safe.bottom;
+  const padX = fit === 'cover' ? 0 : safe.left + safe.right;
+  const padY = fit === 'cover' ? 0 : safe.top + safe.bottom;
   const availW = Math.max(1, viewWidth - padX);
   const availH = Math.max(1, viewHeight - padY);
-  const scale = Math.min(availW / DESIGN_WIDTH, availH / DESIGN_HEIGHT);
+  const scale =
+    fit === 'cover'
+      ? Math.max(availW / DESIGN_WIDTH, availH / DESIGN_HEIGHT)
+      : Math.min(availW / DESIGN_WIDTH, availH / DESIGN_HEIGHT);
   const dpr = getDevicePixelRatio(scale);
 
   return {
@@ -86,7 +119,8 @@ export function computeStageLayout(
     dpr,
     viewWidth,
     viewHeight,
-    safe,
+    safe: fit === 'cover' ? { top: 0, right: 0, bottom: 0, left: 0 } : safe,
+    fit,
   };
 }
 
@@ -95,7 +129,8 @@ export function layoutsEqual(a: StageLayout | null, b: StageLayout): boolean {
   return (
     Math.abs(a.width - b.width) < 0.5 &&
     Math.abs(a.height - b.height) < 0.5 &&
-    Math.abs(a.dpr - b.dpr) < 0.01
+    Math.abs(a.dpr - b.dpr) < 0.01 &&
+    a.fit === b.fit
   );
 }
 
@@ -119,7 +154,6 @@ export function applyResponsiveCssVars(
   stage.style.setProperty('--touch-min', `${Math.round(44 * ui)}px`);
   stage.style.setProperty('--stage-w', `${layout.width}px`);
   stage.style.setProperty('--stage-h', `${layout.height}px`);
-  // Design-space helpers: 1% of design width/height mapped to CSS px on stage
   stage.style.setProperty('--dw', `${layout.width / 100}px`);
   stage.style.setProperty('--dh', `${layout.height / 100}px`);
 
@@ -142,7 +176,6 @@ export function bindStageResize(onResize: () => void): () => void {
 
   window.addEventListener('resize', schedule);
   window.addEventListener('orientationchange', schedule);
-  // Size changes only — ignore visualViewport scroll (browser chrome jitter).
   window.visualViewport?.addEventListener('resize', schedule);
 
   return () => {

@@ -89,6 +89,7 @@ body {
   justify-content: center;
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
     env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  overflow: hidden;
 }
 
 #app::before {
@@ -98,6 +99,27 @@ body {
   pointer-events: none;
   background: radial-gradient(ellipse at center, transparent 48%, rgba(0, 0, 0, 0.2) 100%);
   z-index: 1;
+}
+
+/* Android WebView shell / ?app=1 — full-bleed cover fit (no letterbox bars). */
+html.app-shell,
+html.app-shell body,
+#app.app-shell {
+  background: #000;
+}
+
+#app.app-shell {
+  padding: 0;
+  overflow: hidden;
+}
+
+#app.app-shell::before {
+  display: none;
+}
+
+#app.app-shell .canvas-stage {
+  max-width: none;
+  max-height: none;
 }
 
 .canvas-stage {
