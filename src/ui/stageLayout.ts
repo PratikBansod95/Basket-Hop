@@ -56,30 +56,41 @@ export function syncSafeAreaCssVars(root: HTMLElement = document.documentElement
   root.style.setProperty('--sal', 'env(safe-area-inset-left, 0px)');
 }
 
-/** Usable viewport — accounts for mobile browser chrome via visualViewport. */
+/** Full WebView size — visualViewport alone is often short on Android shells. */
 export function getViewportSize(): { width: number; height: number } {
   const vv = window.visualViewport;
-  if (vv) {
-    return { width: vv.width, height: vv.height };
-  }
-  return { width: window.innerWidth, height: window.innerHeight };
+  const width = Math.max(
+    window.innerWidth || 0,
+    document.documentElement?.clientWidth || 0,
+    document.body?.clientWidth || 0,
+    vv?.width || 0,
+  );
+  const height = Math.max(
+    window.innerHeight || 0,
+    document.documentElement?.clientHeight || 0,
+    document.body?.clientHeight || 0,
+    vv?.height || 0,
+  );
+  return {
+    width: Math.max(1, width),
+    height: Math.max(1, height),
+  };
 }
 
 /**
- * Android WebView shell appends `BasketHopAndroid/...` to the UA.
- * `?app=1` / `?fit=cover` also force cover-fill for local testing.
+ * Android shell must always cover-fill (big UI, no letterbox).
+ * `?fit=contain` from older APKs must not shrink the stage on tall phones.
  */
 export function detectStageFit(): StageFit {
   if (typeof window === 'undefined') return 'contain';
+  if (/BasketHopAndroid/i.test(navigator.userAgent || '')) return 'cover';
   try {
     const params = new URLSearchParams(window.location.search);
-    const fit = params.get('fit');
-    if (fit === 'cover' || params.get('app') === '1') return 'cover';
-    if (fit === 'contain') return 'contain';
+    if (params.get('app') === '1' || params.get('fit') === 'cover') return 'cover';
+    if (params.get('fit') === 'contain') return 'contain';
   } catch {
     // ignore
   }
-  if (/BasketHopAndroid/i.test(navigator.userAgent || '')) return 'cover';
   return 'contain';
 }
 
@@ -135,11 +146,11 @@ export function layoutsEqual(a: StageLayout | null, b: StageLayout): boolean {
 }
 
 /**
- * Stage-relative UI scale (1 = design size on a tall phone).
- * Used by CSS custom properties for touch targets / type.
+ * Stage-relative UI scale. On cover-fit phones the stage is already large;
+ * don't clamp so hard that touch targets / tokens feel tiny.
  */
 export function computeUiScale(layout: StageLayout): number {
-  return Math.max(0.62, Math.min(1.35, layout.scale));
+  return Math.max(0.75, Math.min(1.6, layout.scale));
 }
 
 /** Apply responsive CSS variables on the stage (and optionally app). */

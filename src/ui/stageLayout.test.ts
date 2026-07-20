@@ -28,4 +28,12 @@ describe('stage layout fit modes', () => {
     expect(layout.height).toBeCloseTo(844, 1);
     expect(layout.safe.top).toBe(0);
   });
+
+  it('makes cover larger than contain on Nothing Phone 2 class screens', () => {
+    const contain = computeStageLayout(1080, 2412, undefined, 'contain');
+    const cover = computeStageLayout(1080, 2412, undefined, 'cover');
+    expect(cover.scale).toBeGreaterThan(contain.scale);
+    expect(cover.height).toBeCloseTo(2412, 1);
+    expect(contain.height).toBeLessThan(2412);
+  });
 });
