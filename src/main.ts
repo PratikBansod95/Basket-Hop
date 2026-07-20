@@ -28,9 +28,10 @@ import { LeaderboardOverlay } from './ui/leaderboardOverlay';
 import { bindStageResize, computeStageLayout, layoutsEqual, applyResponsiveCssVars, syncSafeAreaCssVars, type StageLayout } from './ui/stageLayout';
 import { FIXED_DT, stepFixed } from './game/physics';
 import {
+  freezeRenderQuality,
   getRenderQuality,
   getRenderDiagnostics,
-  maxPhysicsStepsForQuality,
+  maxPhysicsStepsForFrame,
   noteFrameTime,
   onRenderQualityChange,
   shakeScaleForQuality,
@@ -377,6 +378,9 @@ async function main(): Promise<void> {
     versusGame.returnToMenu();
     currentRunId = newClientRunId();
     game.reset();
+    physicsAcc = 0;
+    game.syncRenderPrev();
+    freezeRenderQuality(true);
     gameOverModal.hide();
     mainMenu.hide();
     setMenuFxVisible(false);
@@ -395,6 +399,9 @@ async function main(): Promise<void> {
     game.returnToMenu();
     versusResultModal.hide();
     versusGame.reset();
+    physicsAcc = 0;
+    versusGame.syncRenderPrev();
+    freezeRenderQuality(true);
     versusHud.show();
     mainMenu.hide();
     setMenuFxVisible(false);
@@ -411,6 +418,8 @@ async function main(): Promise<void> {
     gameOverModal.hide();
     versusResultModal.hide();
     versusHud.hide();
+    physicsAcc = 0;
+    freezeRenderQuality(false);
     mainMenu.show(saveData);
     mainMenu.setMuted(isMuted());
     setMenuFxVisible(true);
@@ -503,6 +512,7 @@ async function main(): Promise<void> {
     );
 
     const quality = getRenderQuality();
+    const physicsSteps = maxPhysicsStepsForFrame(dt);
 
     if (activeMode === 'versus') {
       onlineSession?.sampleRemoteState(now);
@@ -511,7 +521,7 @@ async function main(): Promise<void> {
         physicsAcc,
         dt,
         (fixedDt) => versusGame.update(fixedDt),
-        maxPhysicsStepsForQuality(quality),
+        physicsSteps,
       );
       onlineSession?.publishSnapshotIfDue(now);
       const alpha = Math.max(0, Math.min(1, physicsAcc / FIXED_DT));
@@ -592,7 +602,7 @@ async function main(): Promise<void> {
       physicsAcc,
       dt,
       (fixedDt) => game.update(fixedDt),
-      maxPhysicsStepsForQuality(quality),
+      physicsSteps,
     );
 
     const alpha = Math.max(0, Math.min(1, physicsAcc / FIXED_DT));

@@ -26,9 +26,11 @@ export function drawDangerZones(
 
   drawZoneBand(ctx, 'top', alpha);
   drawZoneBand(ctx, 'bottom', alpha);
-  const stripeAlpha = alpha * (quality === 'low' ? 0.38 : 0.58);
-  drawZoneStripes(ctx, 'top', stripeAlpha);
-  drawZoneStripes(ctx, 'bottom', stripeAlpha);
+  if (quality !== 'low') {
+    const stripeAlpha = alpha * (quality === 'medium' ? 0.45 : 0.58);
+    drawZoneStripes(ctx, 'top', stripeAlpha);
+    drawZoneStripes(ctx, 'bottom', stripeAlpha);
+  }
   drawBoundaryLines(ctx, alpha, allowDangerZoneExtras(quality));
 }
 

@@ -85,25 +85,32 @@ export function integrateBall(
   const maxStep = ball.radius * 0.35;
   const steps = Math.max(1, Math.ceil((speed * dt) / maxStep));
   const stepDt = dt / steps;
+  const movingHoop = Math.abs(hoopMotion.deltaY) > 0.001 || Math.abs(hoopMotion.velocityY) > 0.001;
+
+  if (!movingHoop) {
+    updateColliders(colliders, hoop.x, hoop.y, hoop.side);
+  }
 
   for (let i = 0; i < steps; i++) {
     const px = ball.x;
     const py = ball.y;
     ball.x += ball.vx * stepDt;
     ball.y += ball.vy * stepDt;
-    const hoopYAtStep =
-      hoop.y - hoopMotion.deltaY * (1 - (i + 1) / steps);
-    updateColliders(colliders, hoop.x, hoopYAtStep, hoop.side);
+    if (movingHoop) {
+      const hoopYAtStep =
+        hoop.y - hoopMotion.deltaY * (1 - (i + 1) / steps);
+      updateColliders(colliders, hoop.x, hoopYAtStep, hoop.side);
+    }
 
     resolveHoopHits(
       ball,
       px,
-      py + hoopMotion.deltaY / steps,
+      py + (movingHoop ? hoopMotion.deltaY / steps : 0),
       colliders,
       hoop,
       onRimHit,
       onBounce,
-      hoopMotion.velocityY,
+      movingHoop ? hoopMotion.velocityY : 0,
     );
 
     if (ball.x + ball.radius < 0) ball.x = CANVAS_WIDTH + ball.radius;

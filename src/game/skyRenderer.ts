@@ -27,6 +27,8 @@ function skyPanY(climbed: number, maxPan: number): number {
 }
 
 /** Full-screen zone backdrops with smooth crossfade by basket level. */
+let lastZoneLevel = -1;
+
 export function drawSkyScreen(
   ctx: CanvasRenderingContext2D,
   climbOffset: number,
@@ -36,7 +38,10 @@ export function drawSkyScreen(
   const climbed = altitudeClimbed(climbOffset);
   const blend = getZoneBlend(level);
   const quality = getRenderQuality();
-  ensureZoneAssetsForLevel(level);
+  if (level !== lastZoneLevel) {
+    lastZoneLevel = level;
+    ensureZoneAssetsForLevel(level);
+  }
 
   const fromImg = getZoneImage(blend.from.id);
   const toImg = getZoneImage(blend.to.id);

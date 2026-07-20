@@ -10,7 +10,15 @@ export type RenderQuality = 'high' | 'medium' | 'low';
 
 let cached: RenderQuality | null = null;
 let controller: AdaptiveQualityController | null = null;
+let qualityFrozen = false;
 const qualityListeners = new Set<(q: RenderQuality) => void>();
+
+function isTouchClassDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+  const narrow = Math.min(window.innerWidth, window.innerHeight) < 520;
+  return coarse || narrow;
+}
 
 export interface RenderDiagnostics {
   quality: RenderQuality;
@@ -85,7 +93,9 @@ export class AdaptiveQualityController {
       if (
         this.healthyMs >= 4000 &&
         this.quality === 'low' &&
-        this.cooldownMs === 0
+        this.cooldownMs === 0 &&
+        !qualityFrozen &&
+        !isTouchClassDevice()
       ) {
         this.changeQuality('medium', 3000);
       }
@@ -132,9 +142,15 @@ function detectBaseQuality(): RenderQuality {
 
 function setQuality(next: RenderQuality): void {
   if (cached === next) return;
+  if (qualityFrozen && cached !== null && next !== 'low') return;
   cached = next;
   if (controller) controller.quality = next;
   for (const listener of qualityListeners) listener(next);
+}
+
+/** Lock quality while a run is active so canvas DPR does not resize mid-game. */
+export function freezeRenderQuality(frozen: boolean): void {
+  qualityFrozen = frozen;
 }
 
 export function getRenderQuality(): RenderQuality {
@@ -154,6 +170,7 @@ export function onRenderQualityChange(listener: (q: RenderQuality) => void): () 
 /** Feed display-frame duration so quality can adapt at runtime. */
 export function noteFrameTime(dtMs: number): void {
   getRenderQuality();
+  if (qualityFrozen) return;
   const next = controller!.noteFrame(dtMs);
   setQuality(next);
 }
@@ -190,7 +207,7 @@ export function allowOrbitFx(q: RenderQuality = getRenderQuality()): boolean {
 }
 
 export function allowSkyAccents(q: RenderQuality = getRenderQuality()): boolean {
-  return q !== 'low';
+  return q === 'high';
 }
 
 export function allowSkyCrossfade(q: RenderQuality = getRenderQuality()): boolean {
@@ -198,7 +215,7 @@ export function allowSkyCrossfade(q: RenderQuality = getRenderQuality()): boolea
 }
 
 export function allowDangerZoneExtras(q: RenderQuality = getRenderQuality()): boolean {
-  return q !== 'low';
+  return q === 'high';
 }
 
 export function shakeScaleForQuality(q: RenderQuality = getRenderQuality()): number {
@@ -207,10 +224,15 @@ export function shakeScaleForQuality(q: RenderQuality = getRenderQuality()): num
   return 0.7;
 }
 
-export function maxPhysicsStepsForQuality(q: RenderQuality = getRenderQuality()): number {
-  if (q === 'low') return 3;
-  if (q === 'medium') return 4;
-  return 5;
+/** Physics must stay independent of render quality. */
+export function maxPhysicsStepsForFrame(rawDtSec: number): number {
+  const needed = Math.ceil(clampPhysicsDt(rawDtSec) / (1 / 60));
+  return Math.min(8, Math.max(4, needed + 1));
+}
+
+function clampPhysicsDt(dt: number): number {
+  if (!Number.isFinite(dt) || dt < 0) return 0;
+  return Math.min(dt, 0.1);
 }
 
 /** Cap DPR to protect fill-rate on high-density phones. */
@@ -220,8 +242,8 @@ export function targetCanvasScale(
   quality: RenderQuality,
 ): number {
   const nativeScale = Math.max(1, stageScale * Math.max(1, rawDpr));
-  if (quality === 'low') return Math.min(nativeScale, 1.35);
-  if (quality === 'medium') return Math.min(nativeScale, 1.85);
+  if (quality === 'low') return Math.min(nativeScale, 1.22);
+  if (quality === 'medium') return Math.min(nativeScale, 1.65);
   return Math.min(nativeScale, 2.25);
 }
 

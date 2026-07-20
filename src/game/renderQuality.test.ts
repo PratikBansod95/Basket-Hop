@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AdaptiveQualityController,
+  maxPhysicsStepsForFrame,
   targetCanvasScale,
 } from './renderQuality';
 
@@ -42,11 +43,19 @@ describe('adaptive render quality', () => {
 describe('canvas resolution budgeting', () => {
   it('targets physical resolution only when the quality budget supports it', () => {
     const stageScale = 390 / 720;
-    expect(targetCanvasScale(stageScale, 3, 'low')).toBe(1.35);
+    expect(targetCanvasScale(stageScale, 3, 'low')).toBe(1.22);
     expect(targetCanvasScale(stageScale, 3, 'medium')).toBeCloseTo(1.625, 3);
   });
 
   it('does not oversample a DPR-2 phone unnecessarily', () => {
     expect(targetCanvasScale(390 / 720, 2, 'medium')).toBeCloseTo(1.083, 3);
+  });
+});
+
+describe('physics step budgeting', () => {
+  it('scales fixed steps with frame duration instead of render quality', () => {
+    expect(maxPhysicsStepsForFrame(1 / 60)).toBe(4);
+    expect(maxPhysicsStepsForFrame(1 / 20)).toBeGreaterThanOrEqual(4);
+    expect(maxPhysicsStepsForFrame(0.1)).toBe(7);
   });
 });
